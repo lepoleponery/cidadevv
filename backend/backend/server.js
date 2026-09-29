@@ -1,4 +1,5 @@
 /* CidadeViva - API (Node.js + Express + PostgreSQL) */
+try { require("dotenv").config(); } catch { /* dotenv é opcional */ }
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
@@ -11,6 +12,8 @@ const path = require("path");
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-troque-em-producao";
 const DATABASE_URL = process.env.DATABASE_URL;
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
+  .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
 if (!DATABASE_URL) {
   console.error("Defina a variável de ambiente DATABASE_URL.");
@@ -23,6 +26,12 @@ const pool = new Pool({
   ssl: local ? false : { rejectUnauthorized: false }
 });
 const q = (sql, params) => pool.query(sql, params);
+
+/* e-mails listados em ADMIN_EMAILS viram administradores */
+async function promoverAdmins() {
+  if (!ADMIN_EMAILS.length) return;
+  await q("UPDATE usuarios SET papel = 'admin' WHERE lower(email) = ANY($1)", [ADMIN_EMAILS]);
+}
 
 /* ---------- criação das tabelas e dados iniciais ---------- */
 async function prepararBanco() {
@@ -50,6 +59,8 @@ async function prepararBanco() {
     for (const x of orgaos)
       await q("INSERT INTO orgaos (nome, icone, telefone, descricao) VALUES ($1,$2,$3,$4)", x);
   }
+
+  await promoverAdmins();
 }
 
 /* ---------- app ---------- */
@@ -76,8 +87,16 @@ function auth(req, res, next) {
   }
 }
 
-const COLUNAS_USUARIO = `id, nome, celular, username, email, criado_em AS "criadoEm"`;
+const admin = h(async (req, res, next) => {
+  const r = await q("SELECT papel FROM usuarios WHERE id = $1", [req.userId]);
+  if (!r.rowCount || r.rows[0].papel !== "admin")
+    return res.status(403).json({ erro: "Acesso restrito a administradores." });
+  next();
+});
+
+const COLUNAS_USUARIO = `id, nome, celular, username, email, papel, criado_em AS "criadoEm"`;
 const gerarToken = id => jwt.sign({ id }, JWT_SECRET, { expiresIn: "7d" });
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /* ---------- autenticação ---------- */
 app.post("/api/auth/cadastro", h(async (req, res) => {
@@ -92,11 +111,13 @@ app.post("/api/auth/cadastro", h(async (req, res) => {
   const user1 = await q("SELECT 1 FROM usuarios WHERE lower(username) = lower($1)", [username.trim()]);
   if (user1.rowCount) return res.status(409).json({ erro: "Este nome de usuário já está em uso." });
 
-  const r = await q(
+  const ins = await q(
     `INSERT INTO usuarios (nome, celular, username, email, senha_hash)
-     VALUES ($1,$2,$3,$4,$5) RETURNING ${COLUNAS_USUARIO}`,
+     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
     [nome.trim(), celular.trim(), username.trim(), email.trim().toLowerCase(), bcrypt.hashSync(senha, 10)]
   );
+  await promoverAdmins();
+  const r = await q(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE id = $1`, [ins.rows[0].id]);
   res.status(201).json({ token: gerarToken(r.rows[0].id), usuario: r.rows[0] });
 }));
 
@@ -106,8 +127,8 @@ app.post("/api/auth/login", h(async (req, res) => {
   const u = r.rows[0];
   if (!u || !bcrypt.compareSync(String(senha || ""), u.senha_hash))
     return res.status(401).json({ erro: "E-mail ou senha incorretos." });
-  const { id, nome, celular, username, email: em, criadoEm } = u;
-  res.json({ token: gerarToken(id), usuario: { id, nome, celular, username, email: em, criadoEm } });
+  const { id, nome, celular, username, email: em, papel, criadoEm } = u;
+  res.json({ token: gerarToken(id), usuario: { id, nome, celular, username, email: em, papel, criadoEm } });
 }));
 
 app.get("/api/me", auth, h(async (req, res) => {
@@ -123,7 +144,7 @@ app.delete("/api/me", auth, h(async (req, res) => {
 
 /* ---------- denúncias ---------- */
 const COLUNAS_DENUNCIA = `id, usuario_id AS "usuarioId", tipo, endereco, descricao,
-  (foto IS NOT NULL) AS "temFoto", status, criado_em AS "criadoEm"`;
+  (foto IS NOT NULL) AS "temFoto", status, criado_em AS "criadoEm", atualizado_em AS "atualizadoEm"`;
 
 app.post("/api/denuncias", auth, upload.single("foto"), h(async (req, res) => {
   const { tipo, endereco, descricao } = req.body || {};
@@ -149,6 +170,7 @@ app.get("/api/denuncias", auth, h(async (req, res) => {
 }));
 
 app.get("/api/denuncias/:id/foto", auth, h(async (req, res) => {
+  if (!UUID.test(req.params.id)) return res.status(404).json({ erro: "Foto não encontrada." });
   const r = await q("SELECT foto, foto_tipo FROM denuncias WHERE id = $1", [req.params.id]);
   if (!r.rowCount || !r.rows[0].foto) return res.status(404).json({ erro: "Foto não encontrada." });
   res.type(r.rows[0].foto_tipo).send(r.rows[0].foto);
@@ -164,13 +186,58 @@ app.get("/api/estatisticas", auth, h(async (req, res) => {
 
 /* ---------- conteúdo ---------- */
 app.get("/api/noticias", h(async (req, res) => {
-  const r = await q("SELECT id, titulo, resumo, imagem, to_char(data, 'YYYY-MM-DD') AS data FROM noticias ORDER BY data DESC");
+  const r = await q("SELECT id, titulo, resumo, imagem, to_char(data, 'YYYY-MM-DD') AS data FROM noticias ORDER BY data DESC, id DESC");
   res.json(r.rows);
 }));
 
 app.get("/api/orgaos", h(async (req, res) => {
   const r = await q("SELECT id, nome, icone, telefone, descricao FROM orgaos ORDER BY id");
   res.json(r.rows);
+}));
+
+/* ---------- administração ---------- */
+app.get("/api/admin/denuncias", auth, admin, h(async (req, res) => {
+  const r = await q(
+    `SELECT d.id, u.username AS autor, d.tipo, d.endereco, d.descricao, d.status,
+            d.criado_em AS "criadoEm", d.atualizado_em AS "atualizadoEm"
+     FROM denuncias d LEFT JOIN usuarios u ON u.id = d.usuario_id
+     ORDER BY d.criado_em DESC LIMIT 200`
+  );
+  res.json(r.rows);
+}));
+
+app.patch("/api/admin/denuncias/:id", auth, admin, h(async (req, res) => {
+  const { status } = req.body || {};
+  if (!["recebida", "resolvida"].includes(status))
+    return res.status(400).json({ erro: "Status inválido." });
+  if (!UUID.test(req.params.id)) return res.status(404).json({ erro: "Denúncia não encontrada." });
+  const r = await q(
+    `UPDATE denuncias SET status = $1, atualizado_em = now() WHERE id = $2 RETURNING ${COLUNAS_DENUNCIA}`,
+    [status, req.params.id]
+  );
+  if (!r.rowCount) return res.status(404).json({ erro: "Denúncia não encontrada." });
+  res.json(r.rows[0]);
+}));
+
+app.post("/api/admin/noticias", auth, admin, h(async (req, res) => {
+  const { titulo, resumo, imagem } = req.body || {};
+  if (!titulo || !resumo) return res.status(400).json({ erro: "Informe título e resumo." });
+  const img = imagem && /^https?:\/\//.test(imagem)
+    ? imagem
+    : "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80";
+  const r = await q(
+    `INSERT INTO noticias (titulo, resumo, imagem, data) VALUES ($1,$2,$3,current_date)
+     RETURNING id, titulo, resumo, imagem, to_char(data, 'YYYY-MM-DD') AS data`,
+    [titulo.trim(), resumo.trim(), img]
+  );
+  res.status(201).json(r.rows[0]);
+}));
+
+app.delete("/api/admin/noticias/:id", auth, admin, h(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(404).json({ erro: "Notícia não encontrada." });
+  await q("DELETE FROM noticias WHERE id = $1", [id]);
+  res.status(204).end();
 }));
 
 /* ---------- chat ---------- */
