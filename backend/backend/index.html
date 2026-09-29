@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CidadeViva</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--verde:#16834b;--verde-e:#0d5c35;--verde-c:#e9f8ef;--fundo:#f4f8f5;--card:#fff;--texto:#173322;--cinza:#66756d;--verm:#d93434;--borda:#dce8df;--sombra:0 8px 25px rgba(20,70,40,.10);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--verde-c:#163a27;--fundo:#0f1a14;--card:#182620;--texto:#e6f2ea;--cinza:#9fb3a6;--borda:#264034;--verde-e:#7fe0aa}}
+:root[data-theme="dark"]{--verde-c:#163a27;--fundo:#0f1a14;--card:#182620;--texto:#e6f2ea;--cinza:#9fb3a6;--borda:#264034;--verde-e:#7fe0aa}
+body{font-family:Arial,Helvetica,sans-serif;background:var(--fundo);color:var(--texto);min-height:100vh}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+.oculto{display:none!important}
+#auth{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;background:linear-gradient(rgba(5,70,35,.75),rgba(5,70,35,.75)),#0d5c35}
+.caixa{width:100%;max-width:450px;background:var(--card);padding:30px;border-radius:25px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.caixa h1{text-align:center;font-size:32px;color:var(--verde-e)}
+.logo{font-size:52px;text-align:center}
+.slogan{text-align:center;color:var(--cinza);margin:8px 0 20px}
+.abas{display:flex;background:var(--verde-c);border-radius:12px;padding:4px;margin-bottom:18px}
+.aba{flex:1;border:0;padding:12px;background:transparent;border-radius:9px;font-weight:bold;color:var(--cinza)}
+.aba.on{background:var(--card);color:var(--verde);box-shadow:var(--sombra)}
+form{display:flex;flex-direction:column;gap:14px}
+label{font-weight:bold;font-size:14px}
+input,textarea,select{width:100%;margin-top:6px;padding:13px;border:1px solid var(--borda);border-radius:11px;outline:none;background:var(--card);color:var(--texto)}
+input:focus,textarea:focus,select:focus{border-color:var(--verde);box-shadow:0 0 0 3px rgba(22,131,75,.15)}
+.btn{border:0;background:var(--verde);color:#fff;padding:14px;border-radius:11px;font-weight:bold}
+.msg{margin-top:14px;padding:12px;border-radius:10px;display:none;background:#fdeaea;color:#a52323}
+.msg.ok{background:#e7f8ed;color:#176536}
+.topo{height:64px;background:var(--card);border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:env(safe-area-inset-top,0px);z-index:50}
+.topo h1{color:var(--verde-e);font-size:22px}
+.av{width:42px;height:42px;border-radius:50%;border:0;background:var(--verde);color:#fff;font-weight:bold}
+main{max-width:1000px;margin:auto;padding:20px 20px 100px}
+.hero{border-radius:22px;padding:34px;color:#fff;background:linear-gradient(90deg,#0d5c35,#16834b);box-shadow:var(--sombra)}
+.hero h2{font-size:32px;margin-bottom:12px}.hero p{font-size:17px;line-height:1.5}
+.bh{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.bb{background:#fff;color:#0d5c35;border:0;padding:12px 18px;border-radius:10px;font-weight:bold}
+.bt{background:rgba(255,255,255,.15);border:1px solid #fff;color:#fff;padding:12px 18px;border-radius:10px;font-weight:bold}
+h2.t{margin:26px 0 14px;font-size:23px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--card);padding:20px;border-radius:18px;box-shadow:var(--sombra);border:1px solid var(--borda)}
+.card h3{margin:8px 0}.card p{color:var(--cinza);line-height:1.5}
+.ic{font-size:34px}
+.num{font-size:30px;color:var(--verde);font-weight:bold}
+.form{background:var(--card);padding:22px;border-radius:20px;box-shadow:var(--sombra)}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px}.g{grid-column:1/-1}
+.up{border:2px dashed #a9cdb5;padding:18px;border-radius:15px;text-align:center;margin-top:8px;background:var(--verde-c)}
+.pv{max-width:100%;max-height:260px;margin-top:12px;border-radius:14px;display:none}
+.org{display:flex;gap:14px;align-items:center}
+.oi{width:52px;height:52px;border-radius:14px;background:var(--verde-c);display:flex;justify-content:center;align-items:center;font-size:26px;flex-shrink:0}
+.tel{display:block;color:var(--verde);font-size:20px;font-weight:bold;margin-top:6px;text-decoration:none}
+.chat{background:var(--card);border-radius:20px;overflow:hidden;box-shadow:var(--sombra)}
+.cm{height:380px;padding:16px;overflow-y:auto}
+.m{background:var(--verde-c);padding:11px;border-radius:12px;margin-bottom:10px;max-width:80%}
+.m.eu{margin-left:auto;background:#bfe8cf;color:#0d3a22}
+.m b{display:block;color:var(--verde-e);font-size:13px}
+.m.eu b{color:#0d5c35}
+.cf{padding:12px;display:flex;gap:10px;border-top:1px solid var(--borda)}.cf input{margin:0}
+.perfil{background:var(--card);padding:28px;border-radius:20px;box-shadow:var(--sombra)}
+.perfil p{margin:5px 0;color:var(--cinza)}
+.ag{width:84px;height:84px;border-radius:50%;background:var(--verde);color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:bold;margin-bottom:14px}
+.acs{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.b2{background:var(--verde-c);color:var(--verde-e);border:0;padding:12px 18px;border-radius:10px;font-weight:bold}
+.bp{background:var(--verm);color:#fff;border:0;padding:12px 18px;border-radius:10px;font-weight:bold}
+.li{border-top:1px solid var(--borda);padding:10px 0}.li small{color:var(--cinza)}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--borda);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;background:transparent;color:var(--cinza);height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:18px}
+nav button span{font-size:11px}nav button.on{color:var(--verde);font-weight:bold}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#173322;color:#fff;padding:13px 18px;border-radius:12px;display:none;z-index:200;max-width:90%}
+.toast.on{display:block}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.fg{grid-template-columns:1fr}.g{grid-column:auto}.hero{padding:24px}.hero h2{font-size:26px}}
+</style>
+</head>
+<body>
+
+<section id="auth"><div class="caixa">
+<div class="logo">🌿</div><h1>CidadeViva</h1>
+<p class="slogan" data-i="slogan">Sua cidade mais limpa e sustentável</p>
+<select id="idi" style="margin:0 0 16px"><option value="pt">🇧🇷 Português</option><option value="en">🇺🇸 English</option><option value="es">🇪🇸 Español</option><option value="fr">🇫🇷 Français</option></select>
+<div class="abas"><button id="aE" class="aba on" type="button">Entrar</button><button id="aC" class="aba" type="button">Criar conta</button></div>
+<form id="fL"><label>E-mail<input id="lE" type="email" placeholder="voce@email.com" required></label><label>Senha<input id="lS" type="password" placeholder="••••••" required></label><button class="btn">Entrar</button></form>
+<form id="fC" class="oculto"><label>Nome completo<input id="cN" required></label><label>Celular<input id="cT" type="tel" placeholder="(00) 00000-0000" required></label><label>Nome de usuário<input id="cU" placeholder="@seuusuario" required></label><label>E-mail<input id="cE" type="email" required></label><label>Senha<input id="cS" type="password" minlength="6" placeholder="Mínimo 6 caracteres" required></label><button class="btn">Criar minha conta</button></form>
+<div id="ma" class="msg"></div>
+</div></section>
+
+<section id="app" class="oculto">
+<header class="topo"><h1>🌿 CidadeViva</h1><button id="av" class="av" title="Meu perfil">CV</button></header>
+<main id="c"></main>
+<nav>
+<button data-r="inicio">🏠<span data-i="inicio">Início</span></button>
+<button data-r="denunciar">📸<span data-i="denunciar">Denunciar</span></button>
+<button data-r="noticias">📰<span data-i="noticias">Notícias</span></button>
+<button data-r="chat">💬<span data-i="chat">Chat</span></button>
+<button data-r="perfil">👤<span data-i="perfil">Perfil</span></button>
+</nav>
+</section>
+<div id="to" class="toast"></div>
+
+<script>
+const T={pt:{slogan:"Sua cidade mais limpa e sustentável",inicio:"Início",denunciar:"Denunciar",noticias:"Notícias",chat:"Chat",perfil:"Perfil"},en:{slogan:"Your city cleaner and more sustainable",inicio:"Home",denunciar:"Report",noticias:"News",chat:"Chat",perfil:"Profile"},es:{slogan:"Tu ciudad más limpia y sostenible",inicio:"Inicio",denunciar:"Denunciar",noticias:"Noticias",chat:"Chat",perfil:"Perfil"},fr:{slogan:"Votre ville plus propre et durable",inicio:"Accueil",denunciar:"Signaler",noticias:"Actualités",chat:"Chat",perfil:"Profil"}};
+const mem={};
+const S={get(k,d){try{const v=localStorage.getItem(k);return v==null?(k in mem?mem[k]:d):JSON.parse(v)}catch(e){return k in mem?mem[k]:d}},set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const $=id=>document.getElementById(id);
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let idioma=S.get("cv_idioma","pt"),user=null,rota="inicio";
+function setIdioma(i){idioma=i;S.set("cv_idioma",i);document.querySelectorAll("[data-i]").forEach(e=>{const t=T[i][e.dataset.i];if(t)e.textContent=t});$("idi").value=i}
+function toast(t){const e=$("to");e.textContent=t;e.classList.add("on");setTimeout(()=>e.classList.remove("on"),2800)}
+function msg(t,ok){const e=$("ma");e.textContent=t;e.className="msg ok".slice(0,ok?6:3);e.style.display="block"}
+function aba(login){$("fL").classList.toggle("oculto",!login);$("fC").classList.toggle("oculto",login);$("aE").classList.toggle("on",login);$("aC").classList.toggle("on",!login);$("ma").style.display="none"}
+$("aE").onclick=()=>aba(true);$("aC").onclick=()=>aba(false);$("idi").onchange=e=>setIdioma(e.target.value);
+$("fC").onsubmit=e=>{e.preventDefault();const us=S.get("cv_usuarios",[]);const u={nome:$("cN").value.trim(),celular:$("cT").value.trim(),username:$("cU").value.trim(),email:$("cE").value.trim().toLowerCase(),senha:$("cS").value};
+if(u.senha.length<6)return msg("A senha precisa ter pelo menos 6 caracteres.");
+if(us.some(x=>x.email===u.email))return msg("Este e-mail já está cadastrado.");
+us.push(u);S.set("cv_usuarios",us);entrar(u)};
+$("fL").onsubmit=e=>{e.preventDefault();const u=S.get("cv_usuarios",[]).find(x=>x.email===$("lE").value.trim().toLowerCase()&&x.senha===$("lS").value);
+if(!u)return msg("E-mail ou senha incorretos. Se ainda não tem conta, toque em Criar conta.");entrar(u)};
+function entrar(u){user=u;S.set("cv_sessao",u.email);$("auth").classList.add("oculto");$("app").classList.remove("oculto");$("av").textContent=u.nome.trim().slice(0,2).toUpperCase();setIdioma(idioma);ir("inicio")}
+function sair(){user=null;S.set("cv_sessao",null);clearInterval(tc);$("app").classList.add("oculto");$("auth").classList.remove("oculto");aba(true)}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>ir(b.dataset.r));
+$("av").onclick=()=>ir("perfil");
+const V={inicio,denunciar,noticias,orgaos,chat,perfil};
+function ir(r){rota=r;clearInterval(tc);document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.r===r));V[r]();scrollTo(0,0)}
+window.ir=ir;
+function inicio(){const d=S.get("cv_denuncias",[]);const us=S.get("cv_usuarios",[]);
+$("c").innerHTML=`<section class="hero"><h2>Olá, ${esc(user.nome.split(" ")[0])}! Vamos cuidar da cidade?</h2><p>Denuncie problemas ambientais, acompanhe notícias e converse com quem quer uma cidade mais limpa.</p><div class="bh"><button class="bb" onclick="ir('denunciar')">📸 Fazer denúncia</button><button class="bt" onclick="ir('orgaos')">📞 Órgãos responsáveis</button></div></section>
+<div class="grid" style="margin-top:18px"><div class="card"><div class="num">${d.length}</div><p>Denúncias registradas</p></div><div class="card"><div class="num">${d.filter(x=>x.status==="resolvida").length}</div><p>Problemas resolvidos</p></div><div class="card"><div class="num">${us.length}</div><p>Cidadãos cadastrados</p></div></div>
+<h2 class="t">Como ajudar</h2><div class="grid"><div class="card"><div class="ic">♻️</div><h3>Separe o lixo</h3><p>Recicláveis limpos e secos vão para a coleta seletiva.</p></div><div class="card"><div class="ic">🚯</div><h3>Denuncie descarte irregular</h3><p>Envie foto e endereço para agilizar a limpeza.</p></div><div class="card"><div class="ic">🌳</div><h3>Cuide das áreas verdes</h3><p>Avise sobre queimadas e árvores em risco.</p></div></div>`}
+function denunciar(){const mine=S.get("cv_denuncias",[]).filter(x=>x.email===user.email).reverse();
+$("c").innerHTML=`<h2 class="t" style="margin-top:6px">Nova denúncia</h2><form id="fd" class="form"><div class="fg"><label>Tipo<select id="dt" required><option value="">Selecione</option><option>Lixo acumulado</option><option>Descarte irregular de entulho</option><option>Queimada</option><option>Esgoto a céu aberto</option><option>Foco de dengue</option><option>Outro</option></select></label><label>Endereço ou referência<input id="de" required placeholder="Rua, número, bairro"></label><label class="g">Descrição<textarea id="dd" rows="4" required placeholder="Descreva o problema"></textarea></label><div class="g"><label>Foto (opcional)</label><div class="up"><input id="df" type="file" accept="image/*"><img id="dp" class="pv" alt="Prévia da foto"></div></div><button class="btn g">Enviar denúncia</button></div></form>
+<h2 class="t">Minhas denúncias</h2><div class="card">${mine.length?mine.map(x=>`<div class="li"><b>${esc(x.tipo)}</b> · ${esc(x.status)}<br>${esc(x.endereco)}<br><small>${new Date(x.data).toLocaleString(idioma)}</small></div>`).join(""):"<p>Você ainda não enviou denúncias.</p>"}</div>`;
+$("df").onchange=e=>{const f=e.target.files[0],i=$("dp");if(!f){i.style.display="none";return}i.src=URL.createObjectURL(f);i.style.display="block"};
+$("fd").onsubmit=e=>{e.preventDefault();const d=S.get("cv_denuncias",[]);d.push({email:user.email,tipo:$("dt").value,endereco:$("de").value.trim(),descricao:$("dd").value.trim(),status:"recebida",data:new Date().toISOString()});S.set("cv_denuncias",d);toast("Denúncia enviada. Obrigado por ajudar!");denunciar()}}
+const NOT=[["Mutirão de limpeza recolhe 5 toneladas de lixo","Voluntários limparam praças e córregos da região central no fim de semana.","🧹"],["Coleta seletiva chega a mais bairros","A prefeitura amplia a coleta de recicláveis e divulga o calendário por bairro.","♻️"],["Plantio de 1.000 árvores na zona norte","Projeto de arborização quer reduzir ilhas de calor e melhorar o ar.","🌳"]];
+function noticias(){$("c").innerHTML=`<h2 class="t" style="margin-top:6px">Notícias</h2><div class="grid">${NOT.map(n=>`<article class="card"><div class="ic">${n[2]}</div><h3>${esc(n[0])}</h3><p>${esc(n[1])}</p></article>`).join("")}</div>`}
+const ORG=[["Defesa Civil","🚨","199","Enchentes, deslizamentos e riscos de desastre."],["Limpeza Urbana","🗑️","156","Lixo acumulado, entulho e descarte irregular."],["Polícia Ambiental","🌳","190","Crimes ambientais, queimadas e desmatamento."],["Vigilância Sanitária","🩺","160","Focos de dengue, esgoto a céu aberto e água contaminada."]];
+function orgaos(){$("c").innerHTML=`<h2 class="t" style="margin-top:6px">Órgãos responsáveis</h2><div class="grid">${ORG.map(o=>`<div class="card org"><div class="oi">${o[1]}</div><div><h3>${o[0]}</h3><p>${o[3]}</p><a class="tel" href="tel:${o[2]}">${o[2]}</a></div></div>`).join("")}</div>`}
+let tc=null;
+function chat(){
+$("c").innerHTML=`<h2 class="t" style="margin-top:6px">Chat da comunidade</h2><div class="chat"><div id="cm" class="cm"></div><form id="cf" class="cf"><input id="ct" maxlength="300" placeholder="Escreva uma mensagem" autocomplete="off" required><button class="btn">Enviar</button></form></div><p style="color:var(--cinza);margin-top:10px;font-size:13px">Demo: as mensagens ficam salvas só neste aparelho.</p>`;
+let ms=S.get("cv_chat",null);if(!ms){ms=[{a:"prefeitura",t:"Bem-vindo ao CidadeViva! Use este espaço para combinar mutirões e trocar dicas.",d:Date.now()}];S.set("cv_chat",ms)}
+const draw=()=>{const b=$("cm");if(!b)return;const m=S.get("cv_chat",ms);b.innerHTML=m.map(x=>`<div class="m ${x.a===user.username?"eu":""}"><b>${esc(x.a)}</b>${esc(x.t)}</div>`).join("");b.scrollTop=b.scrollHeight};
+draw();
+$("cf").onsubmit=e=>{e.preventDefault();const m=S.get("cv_chat",ms);m.push({a:user.username,t:$("ct").value.trim(),d:Date.now()});S.set("cv_chat",m.slice(-100));$("ct").value="";draw()}}
+function perfil(){const n=S.get("cv_denuncias",[]).filter(x=>x.email===user.email).length;
+$("c").innerHTML=`<h2 class="t" style="margin-top:6px">Meu perfil</h2><div class="perfil"><div class="ag">${esc(user.nome.trim().slice(0,2).toUpperCase())}</div><h3>${esc(user.nome)}</h3><p>@${esc(user.username.replace(/^@/,""))}</p><p>${esc(user.email)}</p><p>${esc(user.celular)}</p><p><b>${n}</b> denúncia(s) enviada(s)</p><label style="display:block;margin-top:14px">Idioma<select id="ip"><option value="pt">🇧🇷 Português</option><option value="en">🇺🇸 English</option><option value="es">🇪🇸 Español</option><option value="fr">🇫🇷 Français</option></select></label><div class="acs"><button class="b2" id="bs">Sair</button><button class="bp" id="bx">Excluir minha conta</button></div></div>`;
+$("ip").value=idioma;$("ip").onchange=e=>setIdioma(e.target.value);$("bs").onclick=sair;
+$("bx").onclick=()=>{if(!confirm("Excluir sua conta e suas denúncias?"))return;S.set("cv_usuarios",S.get("cv_usuarios",[]).filter(x=>x.email!==user.email));S.set("cv_denuncias",S.get("cv_denuncias",[]).filter(x=>x.email!==user.email));sair();toast("Conta excluída.")}}
+setIdioma(idioma);
+(function(){const em=S.get("cv_sessao",null);if(!em)return;const u=S.get("cv_usuarios",[]).find(x=>x.email===em);if(u)entrar(u)})();
+</script>
+</body>
+</html>
