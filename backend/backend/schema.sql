@@ -5,21 +5,25 @@ CREATE TABLE IF NOT EXISTS usuarios (
   username    TEXT NOT NULL,
   email       TEXT NOT NULL,
   senha_hash  TEXT NOT NULL,
+  papel       TEXT NOT NULL DEFAULT 'usuario' CHECK (papel IN ('usuario', 'admin')),
   criado_em   TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds', now())
 );
 CREATE UNIQUE INDEX IF NOT EXISTS usuarios_email_idx ON usuarios (lower(email));
 CREATE UNIQUE INDEX IF NOT EXISTS usuarios_username_idx ON usuarios (lower(username));
 
 CREATE TABLE IF NOT EXISTS denuncias (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  usuario_id  UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  tipo        TEXT NOT NULL,
-  endereco    TEXT NOT NULL,
-  descricao   TEXT NOT NULL,
-  foto        BYTEA,
-  foto_tipo   TEXT,
-  status      TEXT NOT NULL DEFAULT 'recebida' CHECK (status IN ('recebida', 'resolvida')),
-  criado_em   TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds', now())
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  usuario_id     UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  tipo           TEXT NOT NULL,
+  endereco       TEXT NOT NULL,
+  descricao      TEXT NOT NULL,
+  foto           BYTEA,
+  foto_tipo      TEXT,
+  status         TEXT NOT NULL DEFAULT 'recebida' CHECK (status IN ('recebida', 'resolvida')),
+  criado_em      TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds', now()),
+  atualizado_em  TIMESTAMPTZ,
+  latitude       DOUBLE PRECISION,
+  longitude      DOUBLE PRECISION
 );
 CREATE INDEX IF NOT EXISTS denuncias_usuario_idx ON denuncias (usuario_id);
 
@@ -47,3 +51,9 @@ CREATE TABLE IF NOT EXISTS orgaos (
   telefone   TEXT NOT NULL,
   descricao  TEXT NOT NULL
 );
+
+-- Atualiza bancos que já existiam antes desta versão
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS papel TEXT NOT NULL DEFAULT 'usuario';
+ALTER TABLE denuncias ADD COLUMN IF NOT EXISTS atualizado_em TIMESTAMPTZ;
+ALTER TABLE denuncias ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+ALTER TABLE denuncias ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
