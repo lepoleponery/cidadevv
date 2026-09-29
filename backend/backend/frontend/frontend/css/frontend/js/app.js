@@ -135,7 +135,7 @@ window.addEventListener("hashchange", () => { if (usuarioAtual) rotear(); });
 
 const telas = {
   "#/inicio": telaInicio, "#/denunciar": telaDenunciar, "#/noticias": telaNoticias,
-  "#/orgaos": telaOrgaos, "#/chat": telaChat, "#/perfil": telaPerfil
+  "#/orgaos": telaOrgaos, "#/chat": telaChat, "#/perfil": telaPerfil, "#/admin": telaAdmin
 };
 
 async function rotear() {
@@ -304,6 +304,7 @@ async function telaPerfil() {
         </select>
       </label>
       <div class="acoes-perfil">
+        ${u.papel === "admin" ? `<button class="botao-secundario" onclick="navegar('#/admin')">🛠️ Painel admin</button>` : ""}
         <button class="botao-secundario" id="btnSair">Sair</button>
         <button class="botao-perigo" id="btnExcluir">Excluir minha conta</button>
       </div>
@@ -316,6 +317,72 @@ async function telaPerfil() {
     try { await api("/me", { method: "DELETE" }); sair(); toast("Conta excluída."); }
     catch (err) { toast(err.message); }
   };
+}
+
+/* ---------- painel administrativo ---------- */
+async function telaAdmin() {
+  if (usuarioAtual.papel !== "admin") throw new Error("Acesso restrito a administradores.");
+  const [dens, nots] = await Promise.all([api("/admin/denuncias"), api("/noticias")]);
+
+  $("conteudo").innerHTML = `
+    <h2 class="titulo-secao">Painel administrativo</h2>
+
+    <h3 style="margin:10px 0">Denúncias (${dens.length})</h3>
+    ${dens.length ? dens.map(d => `
+      <div class="card" style="margin-bottom:12px">
+        <strong>${escapar(d.tipo)}</strong> · @${escapar((d.autor || "removido").replace(/^@/, ""))}
+        <p>${escapar(d.endereco)}</p>
+        <p>${escapar(d.descricao)}</p>
+        <p><small>${new Date(d.criadoEm).toLocaleString(idiomaAtual)}</small></p>
+        <select onchange="mudarStatus('${d.id}', this.value)">
+          <option value="recebida" ${d.status === "recebida" ? "selected" : ""}>Recebida</option>
+          <option value="resolvida" ${d.status === "resolvida" ? "selected" : ""}>Resolvida</option>
+        </select>
+      </div>`).join("") : `<div class="card"><p>Nenhuma denúncia ainda.</p></div>`}
+
+    <h3 style="margin:24px 0 10px">Publicar notícia</h3>
+    <form id="formNoticia" class="formulario"><div class="formulario-grid">
+      <label class="campo-grande">Título <input id="notTitulo" required maxlength="150"></label>
+      <label class="campo-grande">Resumo <textarea id="notResumo" rows="3" required maxlength="500"></textarea></label>
+      <label class="campo-grande">Link da imagem (opcional) <input id="notImagem" placeholder="https://..."></label>
+      <button class="botao-principal campo-grande" type="submit">Publicar</button>
+    </div></form>
+
+    <h3 style="margin:24px 0 10px">Notícias publicadas</h3>
+    ${nots.map(n => `
+      <div class="card" style="margin-bottom:12px">
+        <strong>${escapar(n.titulo)}</strong>
+        <p><small>${escapar(n.data)}</small></p>
+        <button class="botao-perigo" onclick="excluirNoticia(${Number(n.id)})">Excluir</button>
+      </div>`).join("")}`;
+
+  $("formNoticia").addEventListener("submit", async e => {
+    e.preventDefault();
+    try {
+      await api("/admin/noticias", {
+        method: "POST",
+        json: { titulo: $("notTitulo").value, resumo: $("notResumo").value, imagem: $("notImagem").value }
+      });
+      toast("Notícia publicada.");
+      telaAdmin();
+    } catch (err) { toast(err.message); }
+  });
+}
+
+async function mudarStatus(id, status) {
+  try {
+    await api("/admin/denuncias/" + id, { method: "PATCH", json: { status } });
+    toast("Status atualizado.");
+  } catch (err) { toast(err.message); }
+}
+
+async function excluirNoticia(id) {
+  if (!confirm("Excluir esta notícia?")) return;
+  try {
+    await api("/admin/noticias/" + id, { method: "DELETE" });
+    toast("Notícia excluída.");
+    telaAdmin();
+  } catch (err) { toast(err.message); }
 }
 
 /* ---------- inicialização ---------- */
