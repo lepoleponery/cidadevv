@@ -1,66 +1,70 @@
-/* CidadeViva - API (Node.js + Express)
-   Armazenamento simples em arquivo JSON (data/db.json). */
+/* CidadeViva - API (Node.js + Express + PostgreSQL) */
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
+const { Pool } = require("pg");
 const fs = require("fs");
 const path = require("path");
-const crypto = require("crypto");
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-troque-em-producao";
-const DATA_DIR = path.join(__dirname, "data");
-const UPLOAD_DIR = path.join(__dirname, "uploads");
-const DB_FILE = path.join(DATA_DIR, "db.json");
+const DATABASE_URL = process.env.DATABASE_URL;
 
-fs.mkdirSync(DATA_DIR, { recursive: true });
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-/* ---------- banco de dados (JSON) ---------- */
-const dbInicial = {
-  usuarios: [],
-  denuncias: [],
-  mensagens: [],
-  noticias: [
-    { id: 1, titulo: "Mutirão de limpeza recolhe 5 toneladas de lixo", resumo: "Voluntários se reuniram no fim de semana para limpar praças e córregos da região central.", imagem: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80", data: "2026-09-20" },
-    { id: 2, titulo: "Coleta seletiva chega a mais bairros", resumo: "A prefeitura amplia a coleta de recicláveis e divulga o calendário por bairro.", imagem: "https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=800&q=80", data: "2026-09-15" },
-    { id: 3, titulo: "Plantio de 1.000 árvores na zona norte", resumo: "Projeto de arborização quer reduzir ilhas de calor e melhorar a qualidade do ar.", imagem: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=80", data: "2026-09-10" }
-  ],
-  orgaos: [
-    { id: 1, nome: "Defesa Civil", icone: "🚨", telefone: "199", descricao: "Enchentes, deslizamentos e riscos de desastre." },
-    { id: 2, nome: "Limpeza Urbana", icone: "🗑️", telefone: "156", descricao: "Lixo acumulado, entulho e descarte irregular." },
-    { id: 3, nome: "Polícia Ambiental", icone: "🌳", telefone: "190", descricao: "Crimes ambientais, queimadas e desmatamento." },
-    { id: 4, nome: "Vigilância Sanitária", icone: "🩺", telefone: "160", descricao: "Focos de dengue, esgoto a céu aberto e água contaminada." }
-  ]
-};
-
-function lerDb() {
-  if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, JSON.stringify(dbInicial, null, 2));
-  return JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+if (!DATABASE_URL) {
+  console.error("Defina a variável de ambiente DATABASE_URL.");
+  process.exit(1);
 }
-function salvarDb(db) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+
+const local = /localhost|127\.0\.0\.1/.test(DATABASE_URL);
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: local ? false : { rejectUnauthorized: false }
+});
+const q = (sql, params) => pool.query(sql, params);
+
+/* ---------- criação das tabelas e dados iniciais ---------- */
+async function prepararBanco() {
+  await q(fs.readFileSync(path.join(__dirname, "schema.sql"), "utf8"));
+
+  const n = await q("SELECT count(*)::int AS total FROM noticias");
+  if (n.rows[0].total === 0) {
+    const noticias = [
+      ["Mutirão de limpeza recolhe 5 toneladas de lixo", "Voluntários se reuniram no fim de semana para limpar praças e córregos da região central.", "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=800&q=80", "2026-09-20"],
+      ["Coleta seletiva chega a mais bairros", "A prefeitura amplia a coleta de recicláveis e divulga o calendário por bairro.", "https://images.unsplash.com/photo-1604187351574-c75ca79f5807?auto=format&fit=crop&w=800&q=80", "2026-09-15"],
+      ["Plantio de 1.000 árvores na zona norte", "Projeto de arborização quer reduzir ilhas de calor e melhorar a qualidade do ar.", "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=80", "2026-09-10"]
+    ];
+    for (const x of noticias)
+      await q("INSERT INTO noticias (titulo, resumo, imagem, data) VALUES ($1,$2,$3,$4)", x);
+  }
+
+  const o = await q("SELECT count(*)::int AS total FROM orgaos");
+  if (o.rows[0].total === 0) {
+    const orgaos = [
+      ["Defesa Civil", "🚨", "199", "Enchentes, deslizamentos e riscos de desastre."],
+      ["Limpeza Urbana", "🗑️", "156", "Lixo acumulado, entulho e descarte irregular."],
+      ["Polícia Ambiental", "🌳", "190", "Crimes ambientais, queimadas e desmatamento."],
+      ["Vigilância Sanitária", "🩺", "160", "Focos de dengue, esgoto a céu aberto e água contaminada."]
+    ];
+    for (const x of orgaos)
+      await q("INSERT INTO orgaos (nome, icone, telefone, descricao) VALUES ($1,$2,$3,$4)", x);
+  }
 }
-const novoId = () => crypto.randomUUID();
-const publico = ({ senhaHash, ...u }) => u;
 
 /* ---------- app ---------- */
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
-app.use("/uploads", express.static(UPLOAD_DIR));
 
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (req, file, cb) => cb(null, novoId() + path.extname(file.originalname).toLowerCase())
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) =>
     file.mimetype.startsWith("image/") ? cb(null, true) : cb(new Error("Envie apenas imagens."))
 });
+
+const h = fn => (req, res, next) => fn(req, res, next).catch(next);
 
 function auth(req, res, next) {
   const token = (req.headers.authorization || "").replace("Bearer ", "");
@@ -72,110 +76,138 @@ function auth(req, res, next) {
   }
 }
 
+const COLUNAS_USUARIO = `id, nome, celular, username, email, criado_em AS "criadoEm"`;
+const gerarToken = id => jwt.sign({ id }, JWT_SECRET, { expiresIn: "7d" });
+
 /* ---------- autenticação ---------- */
-app.post("/api/auth/cadastro", (req, res) => {
+app.post("/api/auth/cadastro", h(async (req, res) => {
   const { nome, celular, username, email, senha } = req.body || {};
   if (!nome || !celular || !username || !email || !senha)
     return res.status(400).json({ erro: "Preencha todos os campos." });
   if (senha.length < 6)
     return res.status(400).json({ erro: "A senha precisa ter pelo menos 6 caracteres." });
 
-  const db = lerDb();
-  if (db.usuarios.some(u => u.email.toLowerCase() === email.toLowerCase()))
-    return res.status(409).json({ erro: "Este e-mail já está cadastrado." });
-  if (db.usuarios.some(u => u.username.toLowerCase() === username.toLowerCase()))
-    return res.status(409).json({ erro: "Este nome de usuário já está em uso." });
+  const email1 = await q("SELECT 1 FROM usuarios WHERE lower(email) = lower($1)", [email.trim()]);
+  if (email1.rowCount) return res.status(409).json({ erro: "Este e-mail já está cadastrado." });
+  const user1 = await q("SELECT 1 FROM usuarios WHERE lower(username) = lower($1)", [username.trim()]);
+  if (user1.rowCount) return res.status(409).json({ erro: "Este nome de usuário já está em uso." });
 
-  const usuario = {
-    id: novoId(), nome: nome.trim(), celular: celular.trim(), username: username.trim(),
-    email: email.trim().toLowerCase(), senhaHash: bcrypt.hashSync(senha, 10),
-    criadoEm: new Date().toISOString()
-  };
-  db.usuarios.push(usuario);
-  salvarDb(db);
-  const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: "7d" });
-  res.status(201).json({ token, usuario: publico(usuario) });
-});
+  const r = await q(
+    `INSERT INTO usuarios (nome, celular, username, email, senha_hash)
+     VALUES ($1,$2,$3,$4,$5) RETURNING ${COLUNAS_USUARIO}`,
+    [nome.trim(), celular.trim(), username.trim(), email.trim().toLowerCase(), bcrypt.hashSync(senha, 10)]
+  );
+  res.status(201).json({ token: gerarToken(r.rows[0].id), usuario: r.rows[0] });
+}));
 
-app.post("/api/auth/login", (req, res) => {
+app.post("/api/auth/login", h(async (req, res) => {
   const { email, senha } = req.body || {};
-  const usuario = lerDb().usuarios.find(u => u.email === String(email || "").toLowerCase());
-  if (!usuario || !bcrypt.compareSync(String(senha || ""), usuario.senhaHash))
+  const r = await q("SELECT *, criado_em AS \"criadoEm\" FROM usuarios WHERE lower(email) = lower($1)", [String(email || "")]);
+  const u = r.rows[0];
+  if (!u || !bcrypt.compareSync(String(senha || ""), u.senha_hash))
     return res.status(401).json({ erro: "E-mail ou senha incorretos." });
-  const token = jwt.sign({ id: usuario.id }, JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token, usuario: publico(usuario) });
-});
+  const { id, nome, celular, username, email: em, criadoEm } = u;
+  res.json({ token: gerarToken(id), usuario: { id, nome, celular, username, email: em, criadoEm } });
+}));
 
-app.get("/api/me", auth, (req, res) => {
-  const usuario = lerDb().usuarios.find(u => u.id === req.userId);
-  if (!usuario) return res.status(404).json({ erro: "Usuário não encontrado." });
-  res.json(publico(usuario));
-});
+app.get("/api/me", auth, h(async (req, res) => {
+  const r = await q(`SELECT ${COLUNAS_USUARIO} FROM usuarios WHERE id = $1`, [req.userId]);
+  if (!r.rowCount) return res.status(404).json({ erro: "Usuário não encontrado." });
+  res.json(r.rows[0]);
+}));
 
-app.delete("/api/me", auth, (req, res) => {
-  const db = lerDb();
-  db.usuarios = db.usuarios.filter(u => u.id !== req.userId);
-  db.denuncias = db.denuncias.filter(d => d.usuarioId !== req.userId);
-  salvarDb(db);
+app.delete("/api/me", auth, h(async (req, res) => {
+  await q("DELETE FROM usuarios WHERE id = $1", [req.userId]); // apaga também as denúncias (CASCADE)
   res.status(204).end();
-});
+}));
 
 /* ---------- denúncias ---------- */
-app.post("/api/denuncias", auth, upload.single("foto"), (req, res) => {
+const COLUNAS_DENUNCIA = `id, usuario_id AS "usuarioId", tipo, endereco, descricao,
+  (foto IS NOT NULL) AS "temFoto", status, criado_em AS "criadoEm"`;
+
+app.post("/api/denuncias", auth, upload.single("foto"), h(async (req, res) => {
   const { tipo, endereco, descricao } = req.body || {};
   if (!tipo || !endereco || !descricao)
     return res.status(400).json({ erro: "Informe tipo, endereço e descrição." });
-  const db = lerDb();
-  const denuncia = {
-    id: novoId(), usuarioId: req.userId, tipo, endereco, descricao,
-    foto: req.file ? "/uploads/" + req.file.filename : null,
-    status: "recebida", criadoEm: new Date().toISOString()
-  };
-  db.denuncias.push(denuncia);
-  salvarDb(db);
-  res.status(201).json(denuncia);
-});
+  const f = req.file;
+  const r = await q(
+    `INSERT INTO denuncias (usuario_id, tipo, endereco, descricao, foto, foto_tipo)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING ${COLUNAS_DENUNCIA}`,
+    [req.userId, tipo, endereco, descricao, f ? f.buffer : null, f ? f.mimetype : null]
+  );
+  res.status(201).json(r.rows[0]);
+}));
 
-app.get("/api/denuncias", auth, (req, res) => {
-  const { minhas } = req.query;
-  let lista = lerDb().denuncias;
-  if (minhas === "1") lista = lista.filter(d => d.usuarioId === req.userId);
-  res.json(lista.sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)));
-});
+app.get("/api/denuncias", auth, h(async (req, res) => {
+  const minhas = req.query.minhas === "1";
+  const r = await q(
+    `SELECT ${COLUNAS_DENUNCIA} FROM denuncias
+     ${minhas ? "WHERE usuario_id = $1" : ""} ORDER BY criado_em DESC LIMIT 200`,
+    minhas ? [req.userId] : []
+  );
+  res.json(r.rows);
+}));
 
-app.get("/api/estatisticas", auth, (req, res) => {
-  const db = lerDb();
-  res.json({
-    denuncias: db.denuncias.length,
-    resolvidas: db.denuncias.filter(d => d.status === "resolvida").length,
-    usuarios: db.usuarios.length
-  });
-});
+app.get("/api/denuncias/:id/foto", auth, h(async (req, res) => {
+  const r = await q("SELECT foto, foto_tipo FROM denuncias WHERE id = $1", [req.params.id]);
+  if (!r.rowCount || !r.rows[0].foto) return res.status(404).json({ erro: "Foto não encontrada." });
+  res.type(r.rows[0].foto_tipo).send(r.rows[0].foto);
+}));
+
+app.get("/api/estatisticas", auth, h(async (req, res) => {
+  const r = await q(`SELECT
+    (SELECT count(*)::int FROM denuncias) AS denuncias,
+    (SELECT count(*)::int FROM denuncias WHERE status = 'resolvida') AS resolvidas,
+    (SELECT count(*)::int FROM usuarios) AS usuarios`);
+  res.json(r.rows[0]);
+}));
 
 /* ---------- conteúdo ---------- */
-app.get("/api/noticias", (req, res) => res.json(lerDb().noticias));
-app.get("/api/orgaos", (req, res) => res.json(lerDb().orgaos));
+app.get("/api/noticias", h(async (req, res) => {
+  const r = await q("SELECT id, titulo, resumo, imagem, to_char(data, 'YYYY-MM-DD') AS data FROM noticias ORDER BY data DESC");
+  res.json(r.rows);
+}));
+
+app.get("/api/orgaos", h(async (req, res) => {
+  const r = await q("SELECT id, nome, icone, telefone, descricao FROM orgaos ORDER BY id");
+  res.json(r.rows);
+}));
 
 /* ---------- chat ---------- */
-app.get("/api/chat", auth, (req, res) => {
-  const desde = req.query.desde || "";
-  res.json(lerDb().mensagens.filter(m => m.criadoEm > desde).slice(-100));
-});
+app.get("/api/chat", auth, h(async (req, res) => {
+  const desde = req.query.desde || "1970-01-01T00:00:00Z";
+  const r = await q(
+    `SELECT * FROM (
+       SELECT id, usuario_id AS "usuarioId", autor, texto, criado_em AS "criadoEm"
+       FROM mensagens WHERE criado_em > $1 ORDER BY criado_em DESC LIMIT 100
+     ) t ORDER BY "criadoEm"`,
+    [desde]
+  );
+  res.json(r.rows);
+}));
 
-app.post("/api/chat", auth, (req, res) => {
+app.post("/api/chat", auth, h(async (req, res) => {
   const texto = String((req.body || {}).texto || "").trim().slice(0, 500);
   if (!texto) return res.status(400).json({ erro: "Mensagem vazia." });
-  const db = lerDb();
-  const usuario = db.usuarios.find(u => u.id === req.userId);
-  const msg = { id: novoId(), usuarioId: usuario.id, autor: usuario.username, texto, criadoEm: new Date().toISOString() };
-  db.mensagens.push(msg);
-  salvarDb(db);
-  res.status(201).json(msg);
-});
+  const u = await q("SELECT username FROM usuarios WHERE id = $1", [req.userId]);
+  if (!u.rowCount) return res.status(401).json({ erro: "Sessão inválida. Entre novamente." });
+  const r = await q(
+    `INSERT INTO mensagens (usuario_id, autor, texto) VALUES ($1,$2,$3)
+     RETURNING id, usuario_id AS "usuarioId", autor, texto, criado_em AS "criadoEm"`,
+    [req.userId, u.rows[0].username, texto]
+  );
+  res.status(201).json(r.rows[0]);
+}));
 
 /* ---------- frontend estático ---------- */
 app.use(express.static(path.join(__dirname, "..", "frontend")));
 
-app.use((err, req, res, next) => res.status(400).json({ erro: err.message || "Erro na requisição." }));
+app.use((err, req, res, next) => {
+  const erroDeUpload = err instanceof multer.MulterError || err.message === "Envie apenas imagens.";
+  if (!erroDeUpload) console.error(err);
+  res.status(erroDeUpload ? 400 : 500).json({ erro: erroDeUpload ? err.message : "Erro interno no servidor." });
+});
 
-app.listen(PORT, () => console.log(`CidadeViva rodando em http://localhost:${PORT}`));
+prepararBanco()
+  .then(() => app.listen(PORT, () => console.log(`CidadeViva rodando em http://localhost:${PORT}`)))
+  .catch(err => { console.error("Falha ao preparar o banco:", err); process.exit(1); });
