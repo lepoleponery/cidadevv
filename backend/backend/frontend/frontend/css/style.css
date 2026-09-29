@@ -1,0 +1,103 @@
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--verde:#16834b;--verde-escuro:#0d5c35;--verde-claro:#e9f8ef;--fundo:#f4f8f5;--texto:#173322;--cinza:#66756d;--vermelho:#d93434;--borda:#dce8df;--sombra:0 8px 25px rgba(20,70,40,.10)}
+body{font-family:Arial,Helvetica,sans-serif;background:var(--fundo);color:var(--texto);min-height:100vh}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.oculto{display:none!important}
+
+/* Login / cadastro */
+#autenticacao{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px;background:linear-gradient(rgba(5,70,35,.70),rgba(5,70,35,.70)),url("https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1600&q=80") center/cover}
+.auth-caixa{width:100%;max-width:470px;background:rgba(255,255,255,.97);padding:35px;border-radius:25px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.auth-logo{font-size:55px;text-align:center}
+.auth-caixa h1{text-align:center;font-size:34px;color:var(--verde-escuro)}
+.auth-slogan{text-align:center;color:var(--cinza);margin:8px 0 25px}
+.abas{display:flex;background:#eef4f0;border-radius:12px;padding:4px;margin-bottom:20px}
+.aba{flex:1;border:0;padding:12px;background:transparent;border-radius:9px;font-weight:bold;color:var(--cinza)}
+.aba.ativa{background:#fff;color:var(--verde);box-shadow:var(--sombra)}
+.form-auth{display:flex;flex-direction:column;gap:15px}
+label{font-weight:bold;font-size:14px}
+input,textarea,select{width:100%;margin-top:7px;padding:13px;border:1px solid var(--borda);border-radius:11px;outline:none;background:#fff;color:var(--texto)}
+input:focus,textarea:focus,select:focus{border-color:var(--verde);box-shadow:0 0 0 3px rgba(22,131,75,.12)}
+.botao-principal{border:0;background:var(--verde);color:#fff;padding:14px;border-radius:11px;font-weight:bold;transition:.2s}
+.botao-principal:hover{background:var(--verde-escuro);transform:translateY(-1px)}
+.mensagem{margin-top:15px;padding:12px;border-radius:10px;display:none}
+.mensagem.sucesso{display:block;background:#e7f8ed;color:#176536}
+.mensagem.erro{display:block;background:#fdeaea;color:#a52323}
+
+/* Aplicativo */
+.aplicativo{min-height:100vh;padding-bottom:90px}
+.topo{height:70px;background:#fff;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;padding:0 25px;position:sticky;top:0;z-index:50}
+.topo h1{color:var(--verde-escuro);font-size:24px}
+.avatar{width:45px;height:45px;border-radius:50%;border:0;background:var(--verde);color:#fff;font-weight:bold;font-size:18px}
+main{max-width:1100px;margin:auto;padding:25px}
+.hero{min-height:330px;border-radius:25px;padding:40px;display:flex;align-items:center;color:#fff;background:linear-gradient(90deg,rgba(5,70,35,.90),rgba(5,70,35,.35)),url("https://images.unsplash.com/photo-1497250681960-ef046c08a56e?auto=format&fit=crop&w=1500&q=80") center/cover;box-shadow:var(--sombra)}
+.hero h2{font-size:40px;max-width:650px;margin-bottom:15px}
+.hero p{font-size:18px;max-width:600px;line-height:1.6}
+.botoes-hero{display:flex;gap:12px;flex-wrap:wrap;margin-top:25px}
+.botao-branco{background:#fff;color:var(--verde-escuro);border:0;padding:13px 20px;border-radius:10px;font-weight:bold}
+.botao-transparente{background:rgba(255,255,255,.15);border:1px solid #fff;color:#fff;padding:13px 20px;border-radius:10px;font-weight:bold}
+.titulo-secao{margin:30px 0 15px;font-size:25px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:#fff;padding:22px;border-radius:18px;box-shadow:var(--sombra);border:1px solid var(--borda)}
+.card h3{margin:10px 0}
+.card p{color:var(--cinza);line-height:1.5}
+.icone-grande{font-size:35px}
+.estatisticas{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:20px}
+.numero{font-size:32px;color:var(--verde);font-weight:bold}
+
+/* Denúncia */
+.formulario{background:#fff;padding:25px;border-radius:20px;box-shadow:var(--sombra)}
+.formulario-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.formulario .campo-grande{grid-column:1/-1}
+.upload-area{border:2px dashed #a9cdb5;padding:25px;border-radius:15px;text-align:center;margin-top:10px;background:var(--verde-claro)}
+.preview{max-width:100%;max-height:300px;margin-top:15px;border-radius:15px;display:none}
+
+/* Notícias */
+.noticia{overflow:hidden;padding:0}
+.noticia img{width:100%;height:180px;object-fit:cover}
+.noticia-conteudo{padding:20px}
+
+/* Órgãos */
+.orgao{display:flex;gap:15px;align-items:center}
+.orgao-icone{width:55px;height:55px;border-radius:15px;background:var(--verde-claro);display:flex;justify-content:center;align-items:center;font-size:27px;flex-shrink:0}
+.numero-telefone{display:block;color:var(--verde);font-size:20px;font-weight:bold;margin-top:8px;text-decoration:none}
+
+/* Chat */
+.chat{background:#fff;border-radius:20px;overflow:hidden;box-shadow:var(--sombra)}
+.chat-mensagens{height:400px;padding:20px;overflow-y:auto}
+.mensagem-chat{background:var(--verde-claro);padding:12px;border-radius:12px;margin-bottom:10px;max-width:80%}
+.mensagem-chat.minha{background:#d3f0de;margin-left:auto}
+.mensagem-chat strong{display:block;color:var(--verde-escuro)}
+.chat-form{padding:15px;display:flex;gap:10px;border-top:1px solid var(--borda)}
+.chat-form input{margin:0}
+
+/* Perfil */
+.perfil{background:#fff;padding:30px;border-radius:20px;box-shadow:var(--sombra)}
+.perfil p{margin:6px 0;color:var(--cinza)}
+.avatar-grande{width:90px;height:90px;border-radius:50%;background:var(--verde);color:#fff;display:flex;align-items:center;justify-content:center;font-size:35px;font-weight:bold;margin-bottom:15px}
+.botao-perigo{background:var(--vermelho);color:#fff;border:0;padding:12px 18px;border-radius:10px;font-weight:bold}
+.acoes-perfil{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}
+.botao-secundario{background:#eef4f0;color:var(--verde-escuro);border:0;padding:12px 18px;border-radius:10px;font-weight:bold}
+
+/* Menu */
+.menu{position:fixed;bottom:0;left:0;right:0;height:75px;background:#fff;border-top:1px solid var(--borda);display:flex;justify-content:center;gap:10px;z-index:100}
+.menu button{border:0;background:transparent;color:var(--cinza);min-width:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:18px}
+.menu button span{font-size:12px}
+.menu button.ativo{color:var(--verde);font-weight:bold}
+
+/* Toast */
+.toast{position:fixed;right:20px;bottom:95px;background:#173322;color:#fff;padding:14px 18px;border-radius:12px;box-shadow:var(--sombra);display:none;z-index:200}
+.toast.mostrar{display:block}
+
+@media(max-width:800px){
+.grid,.estatisticas,.formulario-grid{grid-template-columns:1fr}
+.formulario .campo-grande{grid-column:auto}
+.hero{padding:25px}.hero h2{font-size:30px}
+.menu{justify-content:space-around;gap:0}
+.menu button{min-width:auto;flex:1}
+}
+@media(max-width:500px){
+.auth-caixa{padding:25px 18px}
+main{padding:15px}
+.topo{padding:0 15px}
+}
