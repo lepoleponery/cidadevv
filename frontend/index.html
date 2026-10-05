@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cidade Viva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span>Cidade Viva</div>
+    <h1>Viu algo errado na sua rua? Avise a cidade.</h1>
+    <p class="sub">Registre queimadas, lixo e outros problemas. Cada denúncia aparece na lista e ajuda a cobrar quem pode resolver.</p>
+  </header>
+
+  <main>
+    <section class="panel" aria-labelledby="t-form">
+      <h2 id="t-form">Nova denúncia</h2>
+      <form id="form" novalidate>
+        <fieldset>
+          <legend>O que você viu?</legend>
+          <div class="tipos" id="tipos"></div>
+        </fieldset>
+        <fieldset>
+          <label for="local">Onde fica?</label>
+          <div class="row">
+            <input type="text" id="local" placeholder="Rua, bairro ou ponto de referência" autocomplete="street-address">
+            <button type="button" class="btn sec" id="btn-gps">Usar minha posição</button>
+          </div>
+        </fieldset>
+        <fieldset>
+          <label for="desc">Descreva o problema</label>
+          <textarea id="desc" placeholder="Ex.: fumaça saindo do terreno baldio atrás da escola"></textarea>
+        </fieldset>
+        <fieldset>
+          <label for="foto">Foto (opcional)</label>
+          <input type="file" id="foto" accept="image/*">
+          <img id="preview" alt="Prévia da foto">
+        </fieldset>
+        <button class="btn main" id="enviar" type="submit">Enviar denúncia</button>
+        <div class="msg" id="msg" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section aria-labelledby="t-lista">
+      <h2 id="t-lista">Denúncias recentes</h2>
+      <div class="filtros" id="filtros"></div>
+      <div class="lista" id="lista"></div>
+    </section>
+  </main>
+  <footer>Cidade Viva · feito para a comunidade</footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
