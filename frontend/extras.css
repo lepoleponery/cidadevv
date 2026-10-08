@@ -1,0 +1,28 @@
+/* Estilos das telas novas: conta, estatísticas, sobre, links */
+.links{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:.9rem}
+.links a{color:var(--mute)}
+.nota{margin:8px 0 0;color:var(--mute);font-size:.85rem}
+.nota a{color:inherit}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:.92rem;margin:0 0 16px}
+.check input{margin-top:4px;flex:none}
+
+.estreito{max-width:640px}
+.topo-simples{padding:36px 0 20px}
+.abas{display:flex;gap:8px;margin-bottom:18px}
+.zona-perigo{margin-top:28px;border-color:var(--fogo)}
+.zona-perigo h2{font-size:1.1rem}
+.zona-perigo p{color:var(--mute);font-size:.92rem;margin-top:0}
+.item .protocolo{font-weight:600;color:var(--ink)}
+
+.grade-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:48px}
+.barras{display:grid;gap:12px}
+.barra-linha{display:grid;grid-template-columns:minmax(80px,150px) 1fr 36px;gap:10px;align-items:center;font-size:.92rem}
+.barra-linha b{text-align:right}
+.trilho{background:color-mix(in srgb,var(--ink) 9%,transparent);border-radius:99px;height:14px;overflow:hidden}
+.trilho i{display:block;height:100%;background:var(--c,var(--esgoto));border-radius:99px}
+
+.texto{max-width:68ch;padding-bottom:64px}
+.texto h2{margin:34px 0 10px;font-size:1.25rem}
+.texto p,.texto li{color:var(--ink)}
+.texto ul{padding-left:20px}
+.aviso-modelo{background:color-mix(in srgb,var(--entulho) 14%,transparent);border-left:5px solid var(--entulho);border-radius:10px;padding:12px 14px;font-size:.92rem}
