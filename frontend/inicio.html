@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cidade Viva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .entrada{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:40px 0}
+  .perfis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:32px}
+  @media(max-width:640px){.perfis{grid-template-columns:1fr}}
+  .perfil{display:block;text-decoration:none;color:inherit;background:var(--card);border:2px solid var(--line);border-left:8px solid var(--c);border-radius:var(--radius);padding:26px 24px;transition:border-color .15s,transform .15s}
+  .perfil:hover{border-color:var(--c);transform:translateY(-2px)}
+  .perfil:focus-visible{outline:3px solid var(--c);outline-offset:3px}
+  .perfil h2{font-size:1.5rem;margin:0 0 8px}
+  .perfil p{margin:0 0 16px;color:var(--mute)}
+  .perfil span{font-weight:600;color:var(--c)}
+  @media(prefers-reduced-motion:reduce){.perfil:hover{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap entrada">
+  <div class="brand"><span class="dot"></span>Cidade Viva</div>
+  <h1>Quem está acessando?</h1>
+  <p class="sub">Escolha seu perfil para continuar.</p>
+
+  <div class="perfis">
+    <a class="perfil" href="index.html" style="--c:var(--lixo)">
+      <h2>Sou morador</h2>
+      <p>Quero denunciar um problema na minha cidade e acompanhar as denúncias.</p>
+      <span>Fazer uma denúncia</span>
+    </a>
+
+    <a class="perfil" href="admin.html" style="--c:var(--esgoto)">
+      <h2>Sou da prefeitura</h2>
+      <p>Preciso analisar as denúncias, mudar o status e responder os moradores.</p>
+      <span>Entrar no painel</span>
+    </a>
+  </div>
+</div>
+</body>
+</html>
