@@ -7,6 +7,7 @@
   :root{--bg:#0F1A1D; --card:#172429; --ink:#E6EFEE; --mute:#97ABAE; --line:#2B3C41}
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Public Sans",system-ui,sans-serif}
 h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;line-height:1.1;margin:0}
 .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
@@ -26,13 +27,14 @@ legend,label{font-weight:600;font-size:.92rem;display:block;margin-bottom:8px;pa
 .tipo span{display:block;text-align:center;padding:12px 6px;border:2px solid var(--line);border-radius:10px;font-weight:600;font-size:.88rem;cursor:pointer;transition:border-color .15s,background .15s}
 .tipo input:checked+span{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
 .tipo input:focus-visible+span{outline:3px solid var(--c);outline-offset:2px}
-input[type=text],textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit}
+input[type=text],input[type=password],textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit}
 textarea{min-height:96px;resize:vertical}
-input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--esgoto);outline-offset:2px}
+input:focus-visible,textarea:focus-visible,button:focus-visible,select:focus-visible{outline:3px solid var(--esgoto);outline-offset:2px}
 .row{display:flex;gap:8px}
 .btn{border:0;border-radius:10px;padding:12px 18px;font:600 1rem "Public Sans",sans-serif;cursor:pointer;background:var(--ink);color:var(--bg)}
 .btn.sec{background:transparent;color:var(--ink);border:1px solid var(--line);white-space:nowrap}
 .btn.main{width:100%;background:var(--fogo);color:#fff;font-size:1.05rem;padding:14px}
+.btn.perigo{background:transparent;color:var(--fogo);border:1px solid var(--fogo)}
 .btn:disabled{opacity:.6;cursor:wait}
 #preview{max-width:100%;max-height:160px;border-radius:10px;margin-top:10px;display:none}
 .msg{margin-top:12px;font-size:.92rem;min-height:1.3em}
@@ -51,11 +53,18 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px soli
 .vazio{padding:32px;text-align:center;color:var(--mute);border:2px dashed var(--line);border-radius:var(--radius)}
 footer{padding:0 0 40px;color:var(--mute);font-size:.85rem}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ===== Extras do site ===== */
+.trocar{display:inline-block;margin-top:12px;color:var(--mute);font-size:.9rem}
+.alerta{background:color-mix(in srgb,var(--fogo) 14%,transparent);border-left:5px solid var(--fogo);border-radius:10px;padding:12px 14px;margin:-6px 0 18px;font-size:.92rem}
+#mapa{height:300px;border-radius:var(--radius);border:1px solid var(--line);margin-bottom:16px;z-index:0}
+.acompanhar{margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
+.acompanhar h2{font-size:1.15rem}
+.apoiar{margin-top:8px;border:1px solid var(--line);background:transparent;color:inherit;border-radius:99px;padding:5px 14px;font:600 .85rem "Public Sans",sans-serif;cursor:pointer}
+.apoiar[disabled]{opacity:.7;cursor:default;border-color:var(--lixo)}
+
 /* ===== Painel admin ===== */
 .login{max-width:420px;margin:12vh auto 0}
-input[type=password]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit}
-input[type=password]:focus-visible{outline:3px solid var(--esgoto);outline-offset:2px}
-[hidden]{display:none!important}
 .topo{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:36px 0 20px}
 .topo .sub{margin-top:8px}
 .resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
@@ -68,5 +77,4 @@ input[type=password]:focus-visible{outline:3px solid var(--esgoto);outline-offse
 .acoes .row{align-items:center;flex-wrap:wrap}
 .acoes select{padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:inherit;font:inherit}
 .acoes textarea{min-height:64px}
-.btn.perigo{background:transparent;color:var(--fogo);border:1px solid var(--fogo)}
 .item .resposta{background:color-mix(in srgb,var(--lixo) 10%,transparent);border-radius:10px;padding:8px 12px;margin:8px 0;color:var(--ink)}
