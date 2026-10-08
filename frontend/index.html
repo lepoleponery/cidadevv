@@ -4,16 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cidade Viva</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#E4572E">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="extras.css">
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand"><span class="dot"></span>Cidade Viva</div>
-    <a class="trocar" href="inicio.html">Trocar perfil</a>
+    <div class="links">
+      <a href="inicio.html">Trocar perfil</a>
+      <a href="conta.html">Minha conta</a>
+      <a href="sobre.html">Sobre e privacidade</a>
+    </div>
     <h1>Viu algo errado na sua rua? Avise a cidade.</h1>
     <p class="sub">Registre queimadas, lixo e outros problemas. Cada denúncia aparece na lista e ajuda a cobrar quem pode resolver.</p>
   </header>
@@ -35,6 +43,11 @@
             <input type="text" id="local" placeholder="Rua, bairro ou ponto de referência" autocomplete="street-address">
             <button type="button" class="btn sec" id="btn-gps">Usar minha posição</button>
           </div>
+          <p class="nota">Se usar sua posição, ela aparece no mapa público.</p>
+        </fieldset>
+        <fieldset>
+          <label for="bairro">Bairro (opcional)</label>
+          <input type="text" id="bairro" placeholder="Ex.: Centro" maxlength="80">
         </fieldset>
         <fieldset>
           <label for="desc">Descreva o problema</label>
@@ -44,8 +57,14 @@
           <label for="foto">Foto (opcional)</label>
           <input type="file" id="foto" accept="image/*">
           <img id="preview" alt="Prévia da foto">
+          <p class="nota">Evite fotografar rostos e placas de veículos.</p>
         </fieldset>
+        <label class="check" id="box-anonima" hidden>
+          <input type="checkbox" id="anonima">
+          <span>Denúncia anônima: não ligar esta denúncia à minha conta</span>
+        </label>
         <button class="btn main" id="enviar" type="submit">Enviar denúncia</button>
+        <p class="nota">Ao enviar, você concorda com a <a href="sobre.html">política de privacidade</a>.</p>
         <div class="msg" id="msg" role="status" aria-live="polite"></div>
       </form>
 
@@ -67,9 +86,10 @@
       <div class="lista" id="lista"></div>
     </section>
   </main>
-  <footer>Cidade Viva · feito para a comunidade</footer>
+  <footer>Cidade Viva · feito para a comunidade · <a href="sobre.html" style="color:inherit">Privacidade</a></footer>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="app.js"></script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 </body>
 </html>
