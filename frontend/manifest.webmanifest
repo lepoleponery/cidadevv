@@ -1,0 +1,14 @@
+{
+  "name": "Cidade Viva",
+  "short_name": "Cidade Viva",
+  "description": "Denuncie problemas da sua cidade e acompanhe a solução.",
+  "lang": "pt-BR",
+  "start_url": "./inicio.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#E8EEEC",
+  "theme_color": "#E4572E",
+  "icons": [
+    { "src": "icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
