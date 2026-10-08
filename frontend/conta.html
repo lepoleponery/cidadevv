@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minha conta · Cidade Viva</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#E4572E">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="extras.css">
+</head>
+<body>
+<div class="wrap estreito">
+  <header class="topo-simples">
+    <div class="brand"><span class="dot"></span>Cidade Viva · Minha conta</div>
+    <div class="links">
+      <a href="index.html">Fazer uma denúncia</a>
+      <a href="inicio.html">Trocar perfil</a>
+      <a href="sobre.html">Privacidade</a>
+    </div>
+  </header>
+
+  <!-- ENTRAR / CRIAR CONTA -->
+  <section id="tela-entrar" class="panel">
+    <div class="abas">
+      <button type="button" class="chip" id="aba-entrar" aria-pressed="true">Entrar</button>
+      <button type="button" class="chip" id="aba-criar" aria-pressed="false">Criar conta</button>
+    </div>
+
+    <form id="form-entrar" novalidate>
+      <fieldset>
+        <label for="e-email">E-mail</label>
+        <input type="text" id="e-email" inputmode="email" autocomplete="username">
+      </fieldset>
+      <fieldset>
+        <label for="e-senha">Senha</label>
+        <input type="password" id="e-senha" autocomplete="current-password">
+      </fieldset>
+      <button class="btn main" id="btn-entrar" type="submit">Entrar</button>
+    </form>
+
+    <form id="form-criar" novalidate hidden>
+      <fieldset>
+        <label for="c-nome">Nome</label>
+        <input type="text" id="c-nome" autocomplete="name" maxlength="80">
+      </fieldset>
+      <fieldset>
+        <label for="c-email">E-mail</label>
+        <input type="text" id="c-email" inputmode="email" autocomplete="username">
+      </fieldset>
+      <fieldset>
+        <label for="c-senha">Senha (mínimo 8 caracteres)</label>
+        <input type="password" id="c-senha" autocomplete="new-password">
+      </fieldset>
+      <label class="check">
+        <input type="checkbox" id="c-aceito">
+        <span>Li e concordo com a <a href="sobre.html">política de privacidade</a>.</span>
+      </label>
+      <button class="btn main" id="btn-criar" type="submit">Criar conta</button>
+    </form>
+
+    <div class="msg" id="msg-entrar" role="status" aria-live="polite"></div>
+    <p class="nota">Conta é opcional: você pode denunciar sem se cadastrar.</p>
+  </section>
+
+  <!-- ÁREA DA CONTA -->
+  <section id="tela-conta" hidden>
+    <div class="topo" style="padding-top:0">
+      <div>
+        <h2 id="ola" style="margin:0"></h2>
+        <p class="sub" style="margin-top:6px">Aqui ficam as denúncias que você enviou com sua conta.</p>
+      </div>
+      <button class="btn sec" id="btn-sair" type="button">Sair</button>
+    </div>
+
+    <h2>Minhas denúncias</h2>
+    <div class="lista" id="minhas"></div>
+
+    <div class="panel zona-perigo">
+      <h2>Excluir minha conta</h2>
+      <p>Seu nome, e-mail e senha são apagados. As denúncias já publicadas continuam no site, sem ligação com você. Esta ação não pode ser desfeita.</p>
+      <fieldset>
+        <label for="x-senha">Confirme sua senha</label>
+        <input type="password" id="x-senha" autocomplete="current-password">
+      </fieldset>
+      <button class="btn perigo" id="btn-excluir" type="button">Excluir conta</button>
+      <div class="msg" id="msg-conta" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+</div>
+<script src="conta.js"></script>
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});</script>
+</body>
+</html>
