@@ -1,7 +1,7 @@
 // ====== CONFIGURAÇÃO ======
 // Rotas esperadas:
 //   GET  {API_URL}/denuncias
-//   POST {API_URL}/denuncias                 -> {protocolo}   (FormData: tipo, local, descricao, lat, lng, foto)
+//   POST {API_URL}/denuncias                 -> {protocolo}   (FormData: tipo, local, bairro, descricao, lat, lng, foto, anonima)
 //   GET  {API_URL}/denuncias/protocolo/:cod  -> denúncia
 //   POST {API_URL}/denuncias/:id/apoio       -> {apoios}
 // Vazio = modo demonstração.
@@ -21,13 +21,14 @@ const novoProtocolo = () => "CV-" + Math.random().toString(36).slice(2, 8).toUpp
 
 function apoiados(){ try{ return JSON.parse(localStorage.getItem("cv_apoios")||"[]") }catch(_){ return [] } }
 function marcarApoio(id){ try{ localStorage.setItem("cv_apoios", JSON.stringify([...apoiados(), String(id)])) }catch(_){} }
+function conta(){ try{ return JSON.parse(localStorage.getItem("cv_conta")||"null") }catch(_){ return null } }
 
 // ----- API -----
 async function carregar(){
   if(!API_URL){
     if(!dados.length) dados = [
-      {id:1,protocolo:"CV-DEMO01",tipo:"queimada",local:"Av. das Palmeiras, terreno baldio",descricao:"Fogo na vegetação seca perto das casas.",status:"Em análise",apoios:12,lat:-23.55,lng:-46.63,criado_em:new Date(Date.now()-36e5*3).toISOString()},
-      {id:2,protocolo:"CV-DEMO02",tipo:"lixo",local:"Praça central, lado da feira",descricao:"Sacos de lixo acumulados há quatro dias.",status:"Recebida",apoios:4,lat:-23.56,lng:-46.65,criado_em:new Date(Date.now()-864e5).toISOString()}
+      {id:1,protocolo:"CV-DEMO01",tipo:"queimada",local:"Av. das Palmeiras, terreno baldio",bairro:"Centro",descricao:"Fogo na vegetação seca perto das casas.",status:"Em análise",apoios:12,lat:-23.55,lng:-46.63,criado_em:new Date(Date.now()-36e5*3).toISOString()},
+      {id:2,protocolo:"CV-DEMO02",tipo:"lixo",local:"Praça central, lado da feira",bairro:"Jardim das Flores",descricao:"Sacos de lixo acumulados há quatro dias.",status:"Recebida",apoios:4,lat:-23.56,lng:-46.65,criado_em:new Date(Date.now()-864e5).toISOString()}
     ];
     return;
   }
@@ -44,8 +45,14 @@ async function enviar(d, arquivo){
   const fd = new FormData();
   Object.entries(d).forEach(([k,v])=>{ if(v!=null) fd.append(k,v) });
   if(arquivo) fd.append("foto",arquivo);
-  const r = await fetch(API_URL+"/denuncias",{method:"POST",body:fd});
-  if(!r.ok) throw new Error("O servidor recusou a denúncia. Tente de novo.");
+  const headers = {};
+  const c = conta();
+  if(c && !d.anonima) headers.Authorization = "Bearer " + c.token; // liga à conta, se estiver logado
+  const r = await fetch(API_URL+"/denuncias",{method:"POST",headers,body:fd});
+  if(!r.ok){
+    const j = await r.json().catch(()=>null);
+    throw new Error(j?.erro || "O servidor recusou a denúncia. Tente de novo.");
+  }
   const resp = await r.json().catch(()=>({}));
   await carregar();
   return resp.protocolo;
@@ -98,11 +105,12 @@ function desenharLista(){
   }
   $("lista").innerHTML = itens.map(d=>{
     const t = TIPOS[d.tipo]||TIPOS.outros, ja = jaApoiou.includes(String(d.id));
+    const onde = esc(d.local||"Local não informado") + (d.bairro ? " · " + esc(d.bairro) : "");
     return `<article class="item" style="--c:${t.cor}">
       <h3><span>${t.nome}</span><span class="status">${esc(d.status||"Recebida")}</span></h3>
       <p>${esc(d.descricao)}</p>
       ${d.foto?`<img src="${esc(d.foto)}" alt="Foto da denúncia" loading="lazy">`:""}
-      <small>${esc(d.local||"Local não informado")} · ${quando(d.criado_em)}</small><br>
+      <small>${onde} · ${quando(d.criado_em)}</small><br>
       <button type="button" class="apoiar" data-id="${esc(d.id)}" ${ja?"disabled":""}>${ja?"Você apoiou":"Apoiar"} · ${d.apoios||0}</button>
     </article>`}).join("");
 }
@@ -166,12 +174,14 @@ $("foto").addEventListener("change",e=>{
 });
 $("form").addEventListener("submit",async e=>{
   e.preventDefault();
-  const local=$("local").value.trim(), descricao=$("desc").value.trim();
+  const local=$("local").value.trim(), descricao=$("desc").value.trim(), bairro=$("bairro").value.trim();
   if(!local) return aviso("Informe onde fica o problema.","erro");
   if(descricao.length<10) return aviso("Descreva o problema com pelo menos 10 caracteres.","erro");
   const btn=$("enviar"); btn.disabled=true; aviso("Enviando...");
   try{
-    const protocolo = await enviar({tipo:document.querySelector("[name=tipo]:checked").value,local,descricao,lat:coords?.lat,lng:coords?.lng},$("foto").files[0]);
+    const dadosForm = {tipo:document.querySelector("[name=tipo]:checked").value,local,bairro,descricao,lat:coords?.lat,lng:coords?.lng};
+    if($("anonima").checked) dadosForm.anonima = "1";
+    const protocolo = await enviar(dadosForm,$("foto").files[0]);
     $("form").reset(); coords=null; fotoData=null; $("preview").style.display="none"; atualizarAlerta();
     aviso(protocolo ? `Denúncia enviada! Guarde seu protocolo: ${protocolo}` : "Denúncia enviada. Obrigado por cuidar da cidade.","ok");
     desenharLista();
@@ -180,5 +190,6 @@ $("form").addEventListener("submit",async e=>{
 });
 
 // ----- Início -----
+$("box-anonima").hidden = !conta(); // só aparece para quem está logado
 desenharTipos(); desenharFiltros();
 carregar().then(desenharLista).catch(err=>{ $("lista").innerHTML=`<div class="vazio">${esc(err.message)}</div>` });
