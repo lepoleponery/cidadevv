@@ -20,6 +20,7 @@ db.exec(`
     protocolo  TEXT NOT NULL UNIQUE,
     tipo       TEXT NOT NULL,
     local      TEXT NOT NULL,
+    bairro     TEXT NOT NULL DEFAULT '',
     descricao  TEXT NOT NULL,
     lat        REAL,
     lng        REAL,
@@ -27,6 +28,7 @@ db.exec(`
     status     TEXT NOT NULL DEFAULT 'Recebida',
     resposta   TEXT NOT NULL DEFAULT '',
     apoios     INTEGER NOT NULL DEFAULT 0,
+    usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
     criado_em  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
   );
 
@@ -38,5 +40,15 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_denuncias_criado ON denuncias(criado_em DESC);
 `);
+
+// Migração: bancos criados na versão anterior ainda não têm estas colunas
+const colunas = db.prepare("PRAGMA table_info(denuncias)").all().map(c => c.name);
+if (!colunas.includes("usuario_id")) {
+  db.exec("ALTER TABLE denuncias ADD COLUMN usuario_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL");
+}
+if (!colunas.includes("bairro")) {
+  db.exec("ALTER TABLE denuncias ADD COLUMN bairro TEXT NOT NULL DEFAULT ''");
+}
+db.exec("CREATE INDEX IF NOT EXISTS idx_denuncias_usuario ON denuncias(usuario_id)");
 
 module.exports = db;
