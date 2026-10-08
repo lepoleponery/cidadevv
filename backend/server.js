@@ -22,6 +22,7 @@ const TIPOS = ["queimada", "lixo", "entulho", "esgoto", "buraco", "outros"];
 const STATUS = ["Recebida", "Em análise", "Resolvida"];
 const UPLOADS = path.join(__dirname, "uploads");
 fs.mkdirSync(UPLOADS, { recursive: true });
+const DUMMY_HASH = bcrypt.hashSync("senha-falsa-para-comparacao", 10);
 
 const app = express();
 if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY) || 1);
@@ -38,7 +39,8 @@ const limitar = (minutos, limite, erro) => rateLimit({
 });
 app.use(limitar(15, 300, "Muitas requisições. Tente de novo em alguns minutos."));
 const limiteCriar = limitar(60, 5, "Limite de denúncias por hora atingido. Tente mais tarde.");
-const limiteLogin = limitar(15, 10, "Muitas tentativas de login. Tente de novo em alguns minutos.");
+const limiteLogin = limitar(15, 10, "Muitas tentativas. Tente de novo em alguns minutos.");
+const limiteCadastro = limitar(60, 5, "Muitos cadastros por hora. Tente mais tarde.");
 const limiteConsulta = limitar(15, 30, "Muitas consultas. Tente de novo em alguns minutos.");
 
 // ----- upload de foto -----
@@ -65,21 +67,35 @@ function apagarArquivo(nome) {
 }
 
 // ----- autenticação -----
+function emitirToken(u) {
+  return jwt.sign({ id: u.id, papel: u.papel }, JWT_SECRET, { expiresIn: u.papel === "moderador" ? "8h" : "7d" });
+}
 function lerToken(req) {
   const h = req.headers.authorization || "";
   if (!h.startsWith("Bearer ")) return null;
   try { return jwt.verify(h.slice(7), JWT_SECRET); } catch { return null; }
 }
-function ehModerador(tokenInfo) {
-  if (!tokenInfo) return false;
-  const u = db.prepare("SELECT papel FROM usuarios WHERE id = ?").get(tokenInfo.id);
+// Usuário do token, conferido no banco (null se não logado ou conta apagada)
+function usuarioLogado(req) {
+  const t = lerToken(req);
+  if (!t) return null;
+  return db.prepare("SELECT id, nome, email, papel FROM usuarios WHERE id = ?").get(t.id) || null;
+}
+function ehModerador(req) {
+  const u = usuarioLogado(req);
   return !!u && u.papel === "moderador";
 }
+function exigirLogin(req, res, next) {
+  const u = usuarioLogado(req);
+  if (!u) return res.status(401).json({ erro: "Não autenticado." });
+  req.usuario = u;
+  next();
+}
 function exigirModerador(req, res, next) {
-  const t = lerToken(req);
-  if (!t) return res.status(401).json({ erro: "Não autenticado." });
-  if (!ehModerador(t)) return res.status(403).json({ erro: "Sem permissão." });
-  req.usuario = t;
+  if (!lerToken(req)) return res.status(401).json({ erro: "Não autenticado." });
+  const u = usuarioLogado(req);
+  if (!u || u.papel !== "moderador") return res.status(403).json({ erro: "Sem permissão." });
+  req.usuario = u;
   next();
 }
 
@@ -90,15 +106,15 @@ function novoProtocolo() {
   for (const b of crypto.randomBytes(6)) s += ALF[b % ALF.length];
   return "CV-" + s;
 }
-function serializar(r, req, admin) {
+function serializar(r, req, comProtocolo) {
   const base = process.env.PUBLIC_URL || `${req.protocol}://${req.get("host")}`;
   const o = {
-    id: r.id, tipo: r.tipo, local: r.local, descricao: r.descricao,
-    lat: r.lat, lng: r.lng, status: r.status, resposta: r.resposta,
-    apoios: r.apoios, criado_em: r.criado_em,
+    id: r.id, tipo: r.tipo, local: r.local, bairro: r.bairro,
+    descricao: r.descricao, lat: r.lat, lng: r.lng,
+    status: r.status, resposta: r.resposta, apoios: r.apoios, criado_em: r.criado_em,
     foto: r.foto ? `${base}/uploads/${r.foto}` : null
   };
-  if (admin) o.protocolo = r.protocolo;
+  if (comProtocolo) o.protocolo = r.protocolo;
   return o;
 }
 function lerId(req, res) {
@@ -112,9 +128,31 @@ function numeroOuNulo(v, min, max) {
   return Number.isFinite(n) && n >= min && n <= max ? n : NaN;
 }
 
-// ================= ROTAS =================
+// ================= CONTAS =================
 
-// Login do moderador
+// Cadastro de morador
+app.post("/auth/cadastro", limiteCadastro, async (req, res, next) => {
+  try {
+    const nome = String(req.body?.nome || "").trim();
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const senha = String(req.body?.senha || "");
+    if (nome.length < 2 || nome.length > 80) return res.status(400).json({ erro: "Informe seu nome (2 a 80 caracteres)." });
+    if (email.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ erro: "E-mail inválido." });
+    if (senha.length < 8 || senha.length > 72) return res.status(400).json({ erro: "A senha deve ter de 8 a 72 caracteres." });
+
+    const hash = await bcrypt.hash(senha, 12);
+    try {
+      const r = db.prepare("INSERT INTO usuarios (nome, email, senha_hash, papel) VALUES (?,?,?, 'cidadao')").run(nome, email, hash);
+      const u = { id: Number(r.lastInsertRowid), papel: "cidadao" };
+      res.status(201).json({ token: emitirToken(u), usuario: { nome, email, papel: "cidadao" } });
+    } catch (e) {
+      if (String(e.message).includes("UNIQUE")) return res.status(409).json({ erro: "Este e-mail já está cadastrado." });
+      throw e;
+    }
+  } catch (e) { next(e); }
+});
+
+// Login (morador ou moderador)
 app.post("/auth/login", limiteLogin, async (req, res, next) => {
   try {
     const email = String(req.body?.email || "").trim().toLowerCase();
@@ -123,42 +161,67 @@ app.post("/auth/login", limiteLogin, async (req, res, next) => {
     // compara sempre, mesmo sem usuário, para não revelar se o e-mail existe
     const ok = await bcrypt.compare(senha, u ? u.senha_hash : DUMMY_HASH);
     if (!u || !ok) return res.status(401).json({ erro: "E-mail ou senha incorretos." });
-    const token = jwt.sign({ id: u.id, papel: u.papel }, JWT_SECRET, { expiresIn: "8h" });
-    res.json({ token, usuario: { nome: u.nome, papel: u.papel } });
+    res.json({ token: emitirToken(u), usuario: { nome: u.nome, email: u.email, papel: u.papel } });
   } catch (e) { next(e); }
 });
-const DUMMY_HASH = bcrypt.hashSync("senha-falsa-para-comparacao", 10);
 
-// Listar denúncias (público; moderador também recebe o protocolo)
+// Denúncias da pessoa logada
+app.get("/minhas-denuncias", exigirLogin, (req, res) => {
+  const linhas = db.prepare("SELECT * FROM denuncias WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 200").all(req.usuario.id);
+  res.json(linhas.map(r => serializar(r, req, true)));
+});
+
+// Excluir a própria conta (direito de exclusão). As denúncias ficam, sem vínculo com a pessoa.
+app.delete("/conta", limiteLogin, exigirLogin, async (req, res, next) => {
+  try {
+    if (req.usuario.papel === "moderador")
+      return res.status(403).json({ erro: "Contas de moderador são removidas pelo administrador." });
+    const u = db.prepare("SELECT * FROM usuarios WHERE id = ?").get(req.usuario.id);
+    const ok = await bcrypt.compare(String(req.body?.senha || ""), u.senha_hash);
+    if (!ok) return res.status(401).json({ erro: "Senha incorreta." });
+    db.prepare("DELETE FROM usuarios WHERE id = ?").run(u.id);
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+// ================= DENÚNCIAS =================
+
+// Listar (público; moderador também recebe o protocolo)
 app.get("/denuncias", (req, res) => {
-  const admin = ehModerador(lerToken(req));
+  const admin = ehModerador(req);
   const linhas = db.prepare("SELECT * FROM denuncias ORDER BY criado_em DESC LIMIT 500").all();
   res.json(linhas.map(r => serializar(r, req, admin)));
 });
 
-// Criar denúncia (público)
+// Criar (público; se estiver logado e não marcar "anônima", fica ligada à conta)
 app.post("/denuncias", limiteCriar, receberFoto, (req, res, next) => {
   const recusar = (msg) => { apagarArquivo(req.file?.filename); return res.status(400).json({ erro: msg }); };
   try {
     const tipo = String(req.body.tipo || "");
     const local = String(req.body.local || "").trim();
+    const bairro = String(req.body.bairro || "").trim();
     const descricao = String(req.body.descricao || "").trim();
     const lat = numeroOuNulo(req.body.lat, -90, 90);
     const lng = numeroOuNulo(req.body.lng, -180, 180);
+    const anonima = ["1", "true"].includes(String(req.body.anonima || ""));
 
     if (!TIPOS.includes(tipo)) return recusar("Tipo de denúncia inválido.");
     if (local.length < 3 || local.length > 200) return recusar("Informe o local (3 a 200 caracteres).");
+    if (bairro.length > 80) return recusar("O bairro deve ter no máximo 80 caracteres.");
     if (descricao.length < 10 || descricao.length > 2000) return recusar("A descrição deve ter de 10 a 2000 caracteres.");
     if (Number.isNaN(lat) || Number.isNaN(lng)) return recusar("Coordenadas inválidas.");
 
+    const usuario = anonima ? null : usuarioLogado(req);
     const inserir = db.prepare(
-      "INSERT INTO denuncias (protocolo, tipo, local, descricao, lat, lng, foto) VALUES (?,?,?,?,?,?,?)"
+      "INSERT INTO denuncias (protocolo, tipo, local, bairro, descricao, lat, lng, foto, usuario_id) VALUES (?,?,?,?,?,?,?,?,?)"
     );
     let protocolo;
     for (let i = 0; i < 5; i++) {
       protocolo = novoProtocolo();
-      try { inserir.run(protocolo, tipo, local, descricao, lat, lng, req.file?.filename || null); break; }
-      catch (e) { if (!String(e.message).includes("UNIQUE") || i === 4) throw e; }
+      try {
+        inserir.run(protocolo, tipo, local, bairro, descricao, lat, lng, req.file?.filename || null, usuario ? usuario.id : null);
+        break;
+      } catch (e) { if (!String(e.message).includes("UNIQUE") || i === 4) throw e; }
     }
     res.status(201).json({ protocolo });
   } catch (e) { apagarArquivo(req.file?.filename); next(e); }
@@ -172,7 +235,7 @@ app.get("/denuncias/protocolo/:cod", limiteConsulta, (req, res) => {
   res.json(serializar(r, req, false));
 });
 
-// Apoiar denúncia (um apoio por pessoa/IP)
+// Apoiar (um apoio por pessoa/IP; guardamos só um código derivado, nunca o IP)
 app.post("/denuncias/:id/apoio", (req, res) => {
   const id = lerId(req, res); if (id === null) return;
   if (!db.prepare("SELECT 1 FROM denuncias WHERE id = ?").get(id))
@@ -210,6 +273,23 @@ app.delete("/denuncias/:id", exigirModerador, (req, res) => {
   db.prepare("DELETE FROM denuncias WHERE id = ?").run(id);
   apagarArquivo(r.foto);
   res.status(204).end();
+});
+
+// Moderador: estatísticas
+app.get("/estatisticas", exigirModerador, (req, res) => {
+  const total = db.prepare("SELECT COUNT(*) AS n FROM denuncias").get().n;
+  const ultimos7dias = db.prepare(
+    "SELECT COUNT(*) AS n FROM denuncias WHERE criado_em >= strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days')"
+  ).get().n;
+  const porTipo = db.prepare("SELECT tipo, COUNT(*) AS total FROM denuncias GROUP BY tipo ORDER BY total DESC").all();
+  const porStatus = db.prepare("SELECT status, COUNT(*) AS total FROM denuncias GROUP BY status ORDER BY total DESC").all();
+  const porBairro = db.prepare(`
+    SELECT COALESCE(MIN(NULLIF(TRIM(bairro), '')), 'Não informado') AS bairro, COUNT(*) AS total
+    FROM denuncias
+    GROUP BY LOWER(COALESCE(NULLIF(TRIM(bairro), ''), 'não informado'))
+    ORDER BY total DESC LIMIT 10
+  `).all();
+  res.json({ total, ultimos7dias, porTipo, porStatus, porBairro });
 });
 
 // ----- erros -----
