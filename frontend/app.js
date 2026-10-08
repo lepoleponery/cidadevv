@@ -1,27 +1,33 @@
 // ====== CONFIGURAÇÃO ======
-// Coloque aqui a URL do seu backend. Esperado:
-//   GET  {API_URL}/denuncias  -> [{id, tipo, local, descricao, status, criado_em, foto, lat, lng}]
-//   POST {API_URL}/denuncias  -> FormData: tipo, local, descricao, lat, lng, foto
-// Se ficar vazio, roda em modo demonstração (dados só nesta página).
+// Rotas esperadas:
+//   GET  {API_URL}/denuncias
+//   POST {API_URL}/denuncias                 -> {protocolo}   (FormData: tipo, local, descricao, lat, lng, foto)
+//   GET  {API_URL}/denuncias/protocolo/:cod  -> denúncia
+//   POST {API_URL}/denuncias/:id/apoio       -> {apoios}
+// Vazio = modo demonstração.
 const API_URL = "";
 
 const TIPOS = {
-  queimada:{nome:"Queimada",cor:"var(--fogo)"},
-  lixo:{nome:"Lixo na rua",cor:"var(--lixo)"},
-  entulho:{nome:"Entulho",cor:"var(--entulho)"},
-  esgoto:{nome:"Esgoto",cor:"var(--esgoto)"},
-  buraco:{nome:"Buraco",cor:"var(--buraco)"},
-  outros:{nome:"Outros",cor:"var(--outros)"}
+  queimada:{nome:"Queimada",cor:"var(--fogo)",hex:"#E4572E"},
+  lixo:{nome:"Lixo na rua",cor:"var(--lixo)",hex:"#2F8F5B"},
+  entulho:{nome:"Entulho",cor:"var(--entulho)",hex:"#8A6D3B"},
+  esgoto:{nome:"Esgoto",cor:"var(--esgoto)",hex:"#2B7A9B"},
+  buraco:{nome:"Buraco",cor:"var(--buraco)",hex:"#6B5CA5"},
+  outros:{nome:"Outros",cor:"var(--outros)",hex:"#5B6E72"}
 };
-let dados = [], filtro = "todos", coords = null, fotoData = null;
+let dados = [], filtro = "todos", coords = null, fotoData = null, mapa = null, camada = null;
 const $ = id => document.getElementById(id);
+const novoProtocolo = () => "CV-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+function apoiados(){ try{ return JSON.parse(localStorage.getItem("cv_apoios")||"[]") }catch(_){ return [] } }
+function marcarApoio(id){ try{ localStorage.setItem("cv_apoios", JSON.stringify([...apoiados(), String(id)])) }catch(_){} }
 
 // ----- API -----
 async function carregar(){
   if(!API_URL){
     if(!dados.length) dados = [
-      {id:1,tipo:"queimada",local:"Av. das Palmeiras, terreno baldio",descricao:"Fogo na vegetação seca perto das casas.",status:"Em análise",criado_em:new Date(Date.now()-36e5*3).toISOString()},
-      {id:2,tipo:"lixo",local:"Praça central, lado da feira",descricao:"Sacos de lixo acumulados há quatro dias.",status:"Recebida",criado_em:new Date(Date.now()-864e5).toISOString()}
+      {id:1,protocolo:"CV-DEMO01",tipo:"queimada",local:"Av. das Palmeiras, terreno baldio",descricao:"Fogo na vegetação seca perto das casas.",status:"Em análise",apoios:12,lat:-23.55,lng:-46.63,criado_em:new Date(Date.now()-36e5*3).toISOString()},
+      {id:2,protocolo:"CV-DEMO02",tipo:"lixo",local:"Praça central, lado da feira",descricao:"Sacos de lixo acumulados há quatro dias.",status:"Recebida",apoios:4,lat:-23.56,lng:-46.65,criado_em:new Date(Date.now()-864e5).toISOString()}
     ];
     return;
   }
@@ -31,15 +37,32 @@ async function carregar(){
 }
 async function enviar(d, arquivo){
   if(!API_URL){
-    dados.unshift({id:Date.now(),...d,foto:fotoData,status:"Recebida",criado_em:new Date().toISOString()});
-    return;
+    const protocolo = novoProtocolo();
+    dados.unshift({id:Date.now(),protocolo,...d,foto:fotoData,apoios:0,status:"Recebida",criado_em:new Date().toISOString()});
+    return protocolo;
   }
   const fd = new FormData();
   Object.entries(d).forEach(([k,v])=>{ if(v!=null) fd.append(k,v) });
   if(arquivo) fd.append("foto",arquivo);
   const r = await fetch(API_URL+"/denuncias",{method:"POST",body:fd});
   if(!r.ok) throw new Error("O servidor recusou a denúncia. Tente de novo.");
+  const resp = await r.json().catch(()=>({}));
   await carregar();
+  return resp.protocolo;
+}
+async function consultar(cod){
+  if(!API_URL) return dados.find(d=>(d.protocolo||"").toUpperCase()===cod) || null;
+  const r = await fetch(`${API_URL}/denuncias/protocolo/${encodeURIComponent(cod)}`);
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error("Não foi possível consultar agora. Tente de novo.");
+  return r.json();
+}
+async function apoiar(id){
+  if(!API_URL){ const d=dados.find(x=>x.id==id); d.apoios=(d.apoios||0)+1; return; }
+  const r = await fetch(`${API_URL}/denuncias/${id}/apoio`,{method:"POST"});
+  if(!r.ok) throw new Error("Não foi possível registrar seu apoio.");
+  const resp = await r.json().catch(()=>null);
+  const d = dados.find(x=>x.id==id); d.apoios = resp?.apoios ?? (d.apoios||0)+1;
 }
 
 // ----- UI -----
@@ -55,32 +78,75 @@ function quando(iso){
 function desenharTipos(){
   $("tipos").innerHTML = Object.entries(TIPOS).map(([k,t],i)=>
     `<label class="tipo" style="--c:${t.cor}"><input type="radio" name="tipo" value="${k}" ${i===0?"checked":""}><span>${t.nome}</span></label>`).join("");
+  atualizarAlerta();
+}
+function atualizarAlerta(){
+  const t = document.querySelector("[name=tipo]:checked");
+  $("alerta").hidden = !(t && t.value==="queimada");
 }
 function desenharFiltros(){
   const opts = [["todos","Todas"],...Object.entries(TIPOS).map(([k,t])=>[k,t.nome])];
   $("filtros").innerHTML = opts.map(([k,n])=>`<button type="button" class="chip" data-f="${k}" aria-pressed="${filtro===k}">${n}</button>`).join("");
 }
+function itensFiltrados(){ return dados.filter(d=>filtro==="todos"||d.tipo===filtro) }
 function desenharLista(){
-  const itens = dados.filter(d=>filtro==="todos"||d.tipo===filtro);
+  const itens = itensFiltrados(), jaApoiou = apoiados();
+  desenharMapa(itens);
   if(!itens.length){
     $("lista").innerHTML = `<div class="vazio">Nenhuma denúncia aqui ainda. Use o formulário para registrar a primeira.</div>`;
     return;
   }
   $("lista").innerHTML = itens.map(d=>{
-    const t = TIPOS[d.tipo]||TIPOS.outros;
+    const t = TIPOS[d.tipo]||TIPOS.outros, ja = jaApoiou.includes(String(d.id));
     return `<article class="item" style="--c:${t.cor}">
       <h3><span>${t.nome}</span><span class="status">${esc(d.status||"Recebida")}</span></h3>
       <p>${esc(d.descricao)}</p>
       ${d.foto?`<img src="${esc(d.foto)}" alt="Foto da denúncia" loading="lazy">`:""}
-      <small>${esc(d.local||"Local não informado")} · ${quando(d.criado_em)}</small>
+      <small>${esc(d.local||"Local não informado")} · ${quando(d.criado_em)}</small><br>
+      <button type="button" class="apoiar" data-id="${esc(d.id)}" ${ja?"disabled":""}>${ja?"Você apoiou":"Apoiar"} · ${d.apoios||0}</button>
     </article>`}).join("");
+}
+function desenharMapa(itens){
+  if(typeof L==="undefined") return $("mapa").style.display="none";
+  if(!mapa){
+    mapa = L.map("mapa").setView([-15.78,-47.93],4); // troque pelo centro da sua cidade
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(mapa);
+    camada = L.layerGroup().addTo(mapa);
+  }
+  camada.clearLayers();
+  const pts = [];
+  itens.filter(d=>d.lat!=null&&d.lng!=null).forEach(d=>{
+    const t = TIPOS[d.tipo]||TIPOS.outros;
+    L.circleMarker([d.lat,d.lng],{radius:9,color:"#fff",weight:2,fillColor:t.hex,fillOpacity:.95})
+      .bindPopup(`<strong>${esc(t.nome)}</strong><br>${esc(d.local||"")}<br>${esc(d.status||"Recebida")}`).addTo(camada);
+    pts.push([d.lat,d.lng]);
+  });
+  if(pts.length) mapa.fitBounds(pts,{padding:[30,30],maxZoom:15});
 }
 function aviso(txt,tipo){ const m=$("msg"); m.textContent=txt; m.className="msg "+(tipo||"") }
 
 // ----- Eventos -----
+document.addEventListener("change",e=>{ if(e.target.name==="tipo") atualizarAlerta() });
 $("filtros").addEventListener("click",e=>{
   const b=e.target.closest("[data-f]"); if(!b) return;
   filtro=b.dataset.f; desenharFiltros(); desenharLista();
+});
+$("lista").addEventListener("click",async e=>{
+  const b=e.target.closest(".apoiar"); if(!b||b.disabled) return;
+  b.disabled=true;
+  try{ await apoiar(b.dataset.id); marcarApoio(b.dataset.id); desenharLista(); }
+  catch(err){ b.disabled=false; alert(err.message) }
+});
+$("btn-consultar").addEventListener("click",async()=>{
+  const cod=$("protocolo").value.trim().toUpperCase(), r=$("resultado");
+  if(!cod){ r.className="msg erro"; r.textContent="Digite o código do protocolo."; return }
+  r.className="msg"; r.textContent="Consultando...";
+  try{
+    const d = await consultar(cod);
+    if(!d){ r.className="msg erro"; r.textContent="Não encontramos esse protocolo. Confira o código e tente de novo."; return }
+    r.className="msg ok";
+    r.textContent = `${(TIPOS[d.tipo]||TIPOS.outros).nome} · ${d.status||"Recebida"}` + (d.resposta?` · Resposta: ${d.resposta}`:"");
+  }catch(err){ r.className="msg erro"; r.textContent=err.message }
 });
 $("btn-gps").addEventListener("click",()=>{
   if(!navigator.geolocation) return aviso("Seu navegador não permite localização. Digite o endereço.","erro");
@@ -105,9 +171,9 @@ $("form").addEventListener("submit",async e=>{
   if(descricao.length<10) return aviso("Descreva o problema com pelo menos 10 caracteres.","erro");
   const btn=$("enviar"); btn.disabled=true; aviso("Enviando...");
   try{
-    await enviar({tipo:document.querySelector("[name=tipo]:checked").value,local,descricao,lat:coords?.lat,lng:coords?.lng},$("foto").files[0]);
-    $("form").reset(); coords=null; fotoData=null; $("preview").style.display="none";
-    aviso("Denúncia enviada. Obrigado por cuidar da cidade.","ok");
+    const protocolo = await enviar({tipo:document.querySelector("[name=tipo]:checked").value,local,descricao,lat:coords?.lat,lng:coords?.lng},$("foto").files[0]);
+    $("form").reset(); coords=null; fotoData=null; $("preview").style.display="none"; atualizarAlerta();
+    aviso(protocolo ? `Denúncia enviada! Guarde seu protocolo: ${protocolo}` : "Denúncia enviada. Obrigado por cuidar da cidade.","ok");
     desenharLista();
   }catch(err){ aviso(err.message,"erro") }
   finally{ btn.disabled=false }
