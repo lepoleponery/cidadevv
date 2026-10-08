@@ -1,73 +1,83 @@
-# 🌿 CidadeViva
+# Cidade Viva
 
-Aplicativo web para uma cidade mais limpa e sustentável. Os cidadãos podem denunciar problemas (lixo, entulho, queimadas, esgoto, focos de dengue), acompanhar notícias, consultar os órgãos responsáveis e conversar em um chat da comunidade.
-
-## Funcionalidades
-
-- Cadastro e login (nome, celular, usuário, e-mail e senha)
-- Denúncias com tipo, endereço, descrição e foto
-- Notícias ambientais
-- Lista de órgãos responsáveis com telefone
-- Chat da comunidade
-- Perfil, troca de idioma (🇧🇷 🇺🇸 🇪🇸 🇫🇷) e exclusão de conta
+Plataforma para moradores denunciarem problemas da cidade (queimadas, lixo, entulho, esgoto, buracos) e acompanharem a solução.
 
 ## Estrutura
 
 ```
-cidadeviva/
+cidade-viva/
 ├── README.md
-├── .gitignore
-├── docs/DOCUMENTACAO.md   # documentação técnica completa
-├── backend/               # API Node.js + Express
-│   ├── server.js
-│   ├── package.json
-│   └── .env.example
-└── frontend/              # interface (HTML, CSS e JS puro)
-    ├── index.html
-    ├── css/style.css
-    └── js/app.js
+├── backend/      API em Node.js + Express + SQLite
+└── frontend/     Site em HTML, CSS e JS puro (sem build)
 ```
 
-## Como executar
+## Funcionalidades
 
-Requisito: [Node.js](https://nodejs.org) 18 ou superior.
+- Denúncia com tipo, local, bairro, descrição, foto e GPS
+- Protocolo para acompanhar cada denúncia
+- Mapa com pinos coloridos por tipo
+- Botão "Apoiar" (um apoio por pessoa)
+- Aviso com o 193 (Bombeiros) em denúncias de queimada
+- Conta de morador opcional, com "Minhas denúncias" e exclusão de conta
+- Denúncia anônima (não liga a denúncia à conta)
+- Painel do moderador: status, resposta, exclusão e estatísticas
+- Página de privacidade (LGPD)
+- PWA: pode ser instalado no celular
+
+## Rodando o backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env      # opcional: defina JWT_SECRET
+cp .env.example .env     # preencha o JWT_SECRET
+node criar-moderador.js "Seu Nome" seu@email.com SuaSenhaForte
 npm start
 ```
 
-Abra **http://localhost:3000**. O backend já serve o frontend.
+Variáveis do `.env`:
 
-Para definir variáveis de ambiente sem `.env`:
+| Variável | Para que serve |
+|---|---|
+| `JWT_SECRET` | Obrigatória, mínimo 32 caracteres. Gere com `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `PORT` | Porta do servidor (padrão 3000) |
+| `CORS_ORIGIN` | Endereço do frontend. Em produção, preencha |
+| `PUBLIC_URL` | Endereço público do backend (links das fotos) |
+| `TRUST_PROXY` | Use `1` se estiver atrás de proxy (Render, Railway...) |
+| `DB_PATH` | Caminho do banco SQLite (opcional) |
 
-```bash
-JWT_SECRET="minha-chave-segura" PORT=3000 npm start
-```
+## Rodando o frontend
 
-## API (resumo)
+1. Em `app.js`, `conta.js`, `admin.js` e `estatisticas.js`, troque `const API_URL = ""` pelo endereço do backend (ex.: `http://localhost:3000`).
+2. Abra `inicio.html` por um servidor local (ex.: `npx serve frontend`). O PWA só funciona em `https` ou `localhost`.
+3. Com `API_URL` vazio, o site roda em modo demonstração, sem backend.
 
-| Método | Rota | Descrição |
+## Rotas da API
+
+| Método | Rota | Quem acessa |
 |---|---|---|
-| POST | `/api/auth/cadastro` | Cria conta |
-| POST | `/api/auth/login` | Entra e retorna o token |
-| GET / DELETE | `/api/me` | Dados do usuário / exclui a conta |
-| POST | `/api/denuncias` | Envia denúncia (multipart, campo `foto`) |
-| GET | `/api/denuncias?minhas=1` | Lista denúncias |
-| GET | `/api/estatisticas` | Totais da plataforma |
-| GET | `/api/noticias` | Notícias |
-| GET | `/api/orgaos` | Órgãos responsáveis |
-| GET / POST | `/api/chat` | Lê / envia mensagens |
+| GET | `/denuncias` | público (moderador recebe também o protocolo) |
+| POST | `/denuncias` | público (liga à conta se estiver logado e não for anônima) |
+| GET | `/denuncias/protocolo/:cod` | público |
+| POST | `/denuncias/:id/apoio` | público |
+| POST | `/auth/cadastro` | público |
+| POST | `/auth/login` | público |
+| GET | `/minhas-denuncias` | logado |
+| DELETE | `/conta` | morador logado |
+| PATCH | `/denuncias/:id` | moderador |
+| DELETE | `/denuncias/:id` | moderador |
+| GET | `/estatisticas` | moderador |
 
-Detalhes em [`docs/DOCUMENTACAO.md`](docs/DOCUMENTACAO.md).
+## Publicação
 
-## Observações
+- **Frontend:** GitHub Pages (ou qualquer hospedagem estática).
+- **Backend:** precisa de um host que rode Node (Render, Railway, Fly.io, VPS). Coloque o endereço do frontend em `CORS_ORIGIN`.
+- Planos gratuitos costumam apagar arquivos a cada reinício, o que perde o banco e as fotos. Use disco persistente.
+- Nunca suba o `.env` nem o arquivo `.db` para o GitHub.
 
-- Os dados ficam em `backend/data/db.json` e as fotos em `backend/uploads/`. É adequado para protótipo; para produção, use um banco de dados real (PostgreSQL, MongoDB).
-- Defina sempre um `JWT_SECRET` forte em produção e use HTTPS.
+## Segurança e privacidade
 
-## Licença
-
-Defina a licença do
+- Senhas com hash (bcrypt), login com token (JWT) e limite de tentativas.
+- Limite de denúncias por hora por IP, contra spam.
+- Upload só de JPG, PNG e WEBP, até 5 MB.
+- O IP não é guardado; apoios usam um código derivado.
+- Preencha os campos [ ] da página `sobre.html` e peça revisão jurídica antes de publicar.
