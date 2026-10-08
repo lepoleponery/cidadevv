@@ -6,12 +6,14 @@
 <title>Cidade Viva</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand"><span class="dot"></span>Cidade Viva</div>
+    <a class="trocar" href="inicio.html">Trocar perfil</a>
     <h1>Viu algo errado na sua rua? Avise a cidade.</h1>
     <p class="sub">Registre queimadas, lixo e outros problemas. Cada denúncia aparece na lista e ajuda a cobrar quem pode resolver.</p>
   </header>
@@ -24,6 +26,9 @@
           <legend>O que você viu?</legend>
           <div class="tipos" id="tipos"></div>
         </fieldset>
+        <div id="alerta" class="alerta" role="alert" hidden>
+          <strong>Há risco agora?</strong> Ligue 193 (Bombeiros) antes de enviar esta denúncia.
+        </div>
         <fieldset>
           <label for="local">Onde fica?</label>
           <div class="row">
@@ -43,16 +48,28 @@
         <button class="btn main" id="enviar" type="submit">Enviar denúncia</button>
         <div class="msg" id="msg" role="status" aria-live="polite"></div>
       </form>
+
+      <div class="acompanhar">
+        <h2>Acompanhar denúncia</h2>
+        <label for="protocolo">Código do protocolo</label>
+        <div class="row">
+          <input type="text" id="protocolo" placeholder="Ex.: CV-A1B2C3">
+          <button type="button" class="btn sec" id="btn-consultar">Consultar</button>
+        </div>
+        <div class="msg" id="resultado" role="status" aria-live="polite"></div>
+      </div>
     </section>
 
     <section aria-labelledby="t-lista">
       <h2 id="t-lista">Denúncias recentes</h2>
+      <div id="mapa" role="region" aria-label="Mapa das denúncias"></div>
       <div class="filtros" id="filtros"></div>
       <div class="lista" id="lista"></div>
     </section>
   </main>
   <footer>Cidade Viva · feito para a comunidade</footer>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
