@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cidade Viva</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#E4572E">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="extras.css">
 <style>
   .entrada{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:40px 0}
   .perfis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:32px}
@@ -39,6 +43,26 @@
       <span>Entrar no painel</span>
     </a>
   </div>
+
+  <div class="links">
+    <a href="conta.html">Minha conta e minhas denúncias</a>
+    <a href="sobre.html">Sobre e privacidade</a>
+    <a href="#" id="btn-instalar" hidden>Instalar como app</a>
+  </div>
 </div>
+<script>
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});
+  var evInstalar = null, btnInstalar = document.getElementById("btn-instalar");
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault(); evInstalar = e; btnInstalar.hidden = false;
+  });
+  btnInstalar.addEventListener("click", async function (e) {
+    e.preventDefault();
+    if (!evInstalar) return;
+    evInstalar.prompt();
+    await evInstalar.userChoice;
+    evInstalar = null; btnInstalar.hidden = true;
+  });
+</script>
 </body>
 </html>
